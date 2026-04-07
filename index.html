@@ -1,0 +1,1827 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="utf-8">
+    <title>Brain Network | Multi Layer</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;0,9..144,700;1,9..144,400&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* ── Design tokens ─────────────────────────────────────────────────── */
+        :root {
+            --bg:            #EFECE7;
+            --surface:       #FFFFFF;
+            --surface-2:     #F7F5F2;
+            --border:        #E0DDD8;
+            --border-strong: #C5C0B8;
+            --text:          #1C1917;
+            --text-2:        #44403C;
+            --text-muted:    #A8A29E;
+            --g1:            #1A4E7A;
+            --g1-mid:        #2D7DC4;
+            --g1-light:      #EAF4FB;
+            --g2:            #9B1C1C;
+            --g2-mid:        #DC2626;
+            --g2-light:      #FEF2F2;
+            --ok:            #166534;
+            --ok-mid:        #16A34A;
+            --ok-light:      #F0FDF4;
+            --warn:          #92400E;
+            --warn-mid:      #D97706;
+            --warn-light:    #FFFBEB;
+            --navy:          #1E3A5F;
+            --sidebar-w:     240px;
+            --r:             10px;
+            --r-lg:          16px;
+            --sh-sm:         0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
+            --sh:            0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+            --sh-lg:         0 12px 30px rgba(0,0,0,0.1), 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+        }
+
+        /* ── Custom scrollbar ───────────────────────────────────────────────── */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+        /* ── Sidebar shell ──────────────────────────────────────────────────── */
+        .sidebar {
+            width: var(--sidebar-w);
+            height: 100vh;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+
+        .sidebar-brand {
+            padding: 26px 22px 22px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .brand-mark {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand-icon-wrap {
+            width: 36px; height: 36px;
+            background: var(--navy);
+            border-radius: 9px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .brand-text-wrap { line-height: 1.2; }
+
+        .brand-name {
+            font-family: 'Fraunces', serif;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: -0.3px;
+        }
+
+        .brand-tagline {
+            font-size: 9px;
+            color: var(--text-muted);
+            font-weight: 500;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+        }
+
+        /* ── Navigation ─────────────────────────────────────────────────────── */
+        .sidebar-nav {
+            flex: 1;
+            padding: 14px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            overflow-y: auto;
+        }
+
+        .nav-tab {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            width: 100%;
+            padding: 9px 12px;
+            border-radius: 8px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-2);
+            background: none;
+            border: none;
+            cursor: pointer;
+            transition: all 0.18s ease;
+            text-align: left;
+            position: relative;
+        }
+
+        .nav-tab .ni { font-size: 15px; width: 20px; text-align: center; flex-shrink: 0; }
+        .nav-tab:hover { background: var(--surface-2); color: var(--text); }
+
+        /* Active nav tab gets a solid background and a left-side accent bar */
+        .nav-tab.active {
+            background: var(--navy);
+            color: white;
+            font-weight: 600;
+        }
+        .nav-tab.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 55%;
+            background: #74B8E8;
+            border-radius: 0 3px 3px 0;
+        }
+
+        /* ── Sidebar bottom section (reset + language toggle) ───────────────── */
+        .sidebar-bottom {
+            padding: 14px 10px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        #btn-reset {
+            display: none;
+            width: 100%;
+            padding: 9px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: none;
+            color: var(--text-muted);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.18s;
+            text-align: left;
+        }
+        #btn-reset:hover { border-color: var(--g2); color: var(--g2); background: var(--g2-light); }
+
+        /* Language toggle pill */
+        .lang-toggle {
+            display: flex;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 3px;
+            gap: 2px;
+        }
+
+        .lang-btn {
+            flex: 1;
+            padding: 5px 0;
+            border-radius: 6px;
+            border: none;
+            background: none;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            letter-spacing: 0.8px;
+        }
+        .lang-btn.active {
+            background: var(--navy);
+            color: white;
+            box-shadow: var(--sh-sm);
+        }
+
+        /* ── Main content area ──────────────────────────────────────────────── */
+        .main { flex: 1; height: 100vh; overflow: hidden; position: relative; }
+
+        /* Each tab panel is absolutely positioned; only the active one is shown */
+        .tab-content {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: tabIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes tabIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── Home tab ───────────────────────────────────────────────────────── */
+        #tab-home { background: var(--bg); overflow-y: auto; }
+
+        .home-layout {
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            align-items: stretch;
+        }
+
+        .home-hero {
+            padding: 64px 52px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            border-right: 1px solid var(--border);
+            overflow-y: auto;
+        }
+
+        .hero-eyebrow {
+            display: inline-flex; align-items: center; gap: 7px;
+            background: white; border: 1px solid var(--border);
+            border-radius: 20px; padding: 5px 14px;
+            font-size: 10px; font-weight: 700; color: var(--text-muted);
+            letter-spacing: 1px; text-transform: uppercase;
+            margin-bottom: 30px; width: fit-content;
+        }
+
+        .hero-title {
+            font-family: 'Fraunces', serif;
+            font-size: 40px; font-weight: 700;
+            line-height: 1.1; color: var(--text);
+            letter-spacing: -1px; margin-bottom: 22px;
+        }
+        .hero-title em { font-style: italic; color: var(--g1); }
+
+        .hero-desc {
+            font-size: 14px; line-height: 1.75;
+            color: var(--text-2); max-width: 370px; margin-bottom: 44px;
+        }
+
+        .feature-list { display: flex; flex-direction: column; gap: 10px; }
+        .feature-item {
+            display: flex; align-items: flex-start; gap: 11px;
+            font-size: 13px; color: var(--text-2); line-height: 1.4;
+        }
+        .feature-marker {
+            width: 18px; height: 18px; border-radius: 5px;
+            background: var(--navy); color: white;
+            font-size: 10px; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; margin-top: 1px;
+        }
+
+        /* Collapsible guide section */
+        .guide-section { margin-top: 36px; }
+        .guide-toggle {
+            display: flex; align-items: center; gap: 8px;
+            background: none; border: none; cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 12px; font-weight: 700; color: var(--text-muted);
+            letter-spacing: 0.8px; text-transform: uppercase;
+            padding: 0; transition: color 0.15s;
+        }
+        .guide-toggle:hover { color: var(--navy); }
+        .guide-toggle-icon { font-size: 10px; transition: transform 0.25s cubic-bezier(0.16,1,0.3,1); }
+        .guide-toggle.open .guide-toggle-icon { transform: rotate(90deg); }
+        .guide-body { overflow: hidden; max-height: 0; transition: max-height 0.4s cubic-bezier(0.16,1,0.3,1), opacity 0.3s ease; opacity: 0; }
+        .guide-body.open { max-height: 700px; opacity: 1; }
+        .guide-steps-list { margin-top: 18px; display: flex; flex-direction: column; gap: 0; border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
+        .guide-step-item { display: flex; gap: 14px; padding: 13px 16px; background: white; border-bottom: 1px solid var(--border); align-items: flex-start; }
+        .guide-step-item:last-child { border-bottom: none; }
+        .guide-step-num { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; color: white; background: var(--navy); border-radius: 4px; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+        .guide-step-content { flex: 1; }
+        .guide-step-title { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+        .guide-step-desc { font-size: 11px; color: var(--text-2); line-height: 1.55; }
+        .guide-step-badge { display: inline-flex; align-items: center; gap: 4px; margin-top: 5px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 4px; padding: 2px 7px; font-size: 9px; font-weight: 700; font-family: 'JetBrains Mono', monospace; color: var(--text-muted); }
+        .guide-note { margin-top: 12px; padding: 10px 14px; background: var(--warn-light); border: 1px solid rgba(217,119,6,0.25); border-radius: 8px; font-size: 11px; color: var(--warn); line-height: 1.55; }
+
+        /* ── Upload panel (right column of home) ────────────────────────────── */
+        .home-upload { padding: 64px 52px; display: flex; flex-direction: column; justify-content: center; }
+        .upload-heading { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 600; color: var(--text); letter-spacing: -0.3px; margin-bottom: 5px; }
+        .upload-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 28px; }
+        .upload-steps { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+
+        /* Each upload row is a clickable label that triggers the hidden file input */
+        .upload-step {
+            display: flex; align-items: center; gap: 14px;
+            background: white; border: 1px solid var(--border);
+            border-radius: var(--r); padding: 14px 16px;
+            cursor: pointer; transition: all 0.2s ease;
+        }
+        .upload-step:hover { border-color: var(--g1-mid); box-shadow: var(--sh); transform: translateY(-1px); }
+        .upload-step.loaded { border-color: var(--ok-mid); background: var(--ok-light); }
+        .step-num { width: 28px; height: 28px; border-radius: 7px; background: var(--surface-2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; color: var(--text-muted); flex-shrink: 0; transition: 0.2s; }
+        .upload-step.loaded .step-num { background: var(--ok); border-color: var(--ok); color: white; }
+        .step-num-loaded { display: none; }
+        .upload-step.loaded .step-num-num { display: none; }
+        .upload-step.loaded .step-num-loaded { display: block; }
+        .step-body { flex: 1; min-width: 0; }
+        .step-label { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+        .step-file { font-size: 11px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        input[type="file"] { display: none; }
+
+        /* Primary CTA button used for uploads and modal actions */
+        .btn-run {
+            width: 100%; padding: 14px;
+            background: var(--navy); color: white;
+            border: none; border-radius: var(--r);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px; font-weight: 700;
+            cursor: pointer; transition: all 0.2s ease;
+            letter-spacing: 0.2px;
+        }
+        .btn-run:hover { background: #142C47; transform: translateY(-1px); box-shadow: var(--sh-lg); }
+        .btn-run:active { transform: translateY(0); }
+
+        /* Error notification strip */
+        #error-banner {
+            display: none;
+            margin-top: 14px; padding: 11px 15px;
+            background: var(--g2-light);
+            border: 1px solid rgba(155,28,28,0.2);
+            border-radius: var(--r);
+            color: var(--g2);
+            font-size: 12px; font-weight: 500;
+            animation: tabIn 0.25s ease;
+        }
+
+        /* ── 3-D visualization tab ──────────────────────────────────────────── */
+        #tab-vis { background: var(--bg); }
+
+        /* The Plotly canvas fills the area left of the side panel */
+        #plot-3d { position: absolute; top: 0; left: 0; right: 290px; bottom: 0; z-index: 0; }
+
+        /* Semi-transparent overlay used to hide the Plotly trace swap during
+           view transitions, giving the appearance of a smooth cinematic cut */
+        #view-overlay {
+            position: absolute;
+            inset: 0;
+            right: 290px;
+            background: var(--bg);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 5;
+        }
+
+        /* ── Right-side control panel ───────────────────────────────────────── */
+        .vis-panel { position: absolute; top: 0; right: 0; bottom: 0; width: 290px; background: white; border-left: 1px solid var(--border); display: flex; flex-direction: column; z-index: 10; overflow: hidden; }
+        .vis-panel-top { padding: 18px 20px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+        .vis-panel-title { font-family: 'Fraunces', serif; font-size: 15px; font-weight: 600; color: var(--text); }
+        .vis-panel-body { flex: 1; overflow-y: auto; padding: 16px 20px; }
+
+        .ctrl-section { margin-bottom: 18px; }
+        .ctrl-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.1px; color: var(--text-muted); margin-bottom: 7px; display: block; }
+
+        .layer-group-head { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; margin-top: 12px; }
+        .lgdot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .lg-name { font-size: 11px; font-weight: 600; color: var(--text-2); }
+
+        .toggle-btn { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 8px 11px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 7px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; color: var(--text-2); cursor: pointer; transition: 0.16s; margin-bottom: 5px; }
+        .toggle-btn:hover { background: white; border-color: var(--border-strong); }
+        .toggle-btn.active.sani { background: var(--g1-light); border-color: var(--g1-mid); color: var(--g1); }
+        .toggle-btn.active.depr { background: var(--g2-light); border-color: var(--g2-mid); color: var(--g2); }
+
+        select { width: 100%; padding: 8px 11px; border-radius: 7px; border: 1px solid var(--border); background: var(--surface-2); font-family: 'DM Sans', sans-serif; font-size: 12px; color: var(--text); outline: none; cursor: pointer; appearance: none; }
+        select:focus { border-color: var(--g1-mid); background-color: white; }
+
+        .slider-val-label { font-size: 11px; font-weight: 600; color: var(--text-2); margin-bottom: 7px; font-family: 'JetBrains Mono', monospace; }
+        input[type="range"] { width: 100%; appearance: none; height: 4px; border-radius: 2px; background: linear-gradient(to right, var(--g2-mid), #F59E0B, var(--ok-mid)); outline: none; cursor: pointer; border: none; margin-bottom: 0; }
+        input[type="range"]::-webkit-slider-thumb { appearance: none; width: 15px; height: 15px; border-radius: 50%; background: white; border: 2px solid var(--navy); box-shadow: var(--sh-sm); cursor: pointer; transition: 0.14s; }
+        input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.25); }
+        .slider-ends { display: flex; justify-content: space-between; font-size: 9px; color: var(--text-muted); font-weight: 600; margin-top: 5px; }
+
+        input[type="text"] { width: 100%; padding: 8px 11px; border-radius: 7px; border: 1px solid var(--border); background: var(--surface-2); font-family: 'DM Sans', sans-serif; font-size: 12px; color: var(--text); outline: none; transition: 0.14s; }
+        input[type="text"]:focus { border-color: var(--g1-mid); background: white; }
+
+        /* Node info card shown after a search query */
+        .info-card { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r); padding: 13px 14px; margin-top: 10px; transition: border-color 0.2s; }
+        .info-node-name { font-family: 'Fraunces', serif; font-size: 13px; font-weight: 600; color: var(--text); padding-bottom: 9px; margin-bottom: 9px; border-bottom: 1px solid var(--border); word-break: break-word; }
+        .info-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-size: 11px; }
+        .info-key { color: var(--text-muted); font-weight: 500; }
+        .info-vals { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 500; display: flex; gap: 6px; }
+        .info-val-sani { color: var(--g1); } .info-val-depr { color: var(--g2); }
+        .ctrl-divider { height: 1px; background: var(--border); margin: 14px 0; }
+
+        /* ── Bottom toolbar ──────────────────────────────────────────────────── */
+        .vis-toolbar { position: absolute; bottom: 20px; left: 20px; right: 310px; display: flex; justify-content: center; z-index: 10; }
+        .toolbar-inner { display: flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.95); backdrop-filter: blur(14px); border: 1px solid var(--border); border-radius: 40px; padding: 6px 10px; box-shadow: var(--sh-lg); }
+        .tool-btn { display: flex; align-items: center; gap: 5px; padding: 7px 14px; border-radius: 20px; border: 1px solid transparent; background: none; font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600; color: var(--text-2); cursor: pointer; transition: all 0.18s ease; white-space: nowrap; }
+        .tool-btn:hover { background: var(--surface-2); border-color: var(--border); color: var(--text); }
+        .tool-btn.active { background: var(--navy); color: white; border-color: var(--navy); }
+        .btn-align-hero { background: var(--navy); color: white; border-color: var(--navy); font-weight: 700; letter-spacing: 0.2px; }
+        .btn-align-hero:hover { background: #142C47; color: white; border-color: #142C47; }
+        .divider { width: 1px; height: 18px; background: var(--border); margin: 0 3px; }
+
+        /* ── Dashboard tab ───────────────────────────────────────────────────── */
+        #tab-dash { background: var(--bg); }
+        .dash-container { position: absolute; top: 0; left: 0; right: 0; bottom: 0; overflow-y: auto; padding: 28px 30px 32px; display: flex; flex-direction: column; gap: 18px; }
+        .dash-topbar { display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+        .dash-heading { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 700; color: var(--text); letter-spacing: -0.4px; }
+        .group-legend { display: flex; gap: 18px; align-items: center; }
+        .gl-item { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--text-2); }
+        .gl-dot { width: 9px; height: 9px; border-radius: 50%; }
+
+        /* KPI cards grid — 4 columns with equal width */
+        .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; flex-shrink: 0; }
+        .kpi-card { background: white; border: 1px solid var(--border); border-radius: var(--r); padding: 18px; box-shadow: var(--sh-sm); transition: box-shadow 0.2s, transform 0.2s; }
+        .kpi-card:hover { box-shadow: var(--sh); transform: translateY(-1px); }
+        .kpi-title { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.9px; color: var(--text-muted); margin-bottom: 11px; }
+        .kpi-val-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 5px; flex-wrap: wrap; }
+        .kpi-val { font-family: 'JetBrains Mono', monospace; font-size: clamp(13px, 1.5vw, 19px); font-weight: 700; }
+        .kpi-delta { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 3px; }
+        .delta-pos { background: var(--ok-light); color: var(--ok); } .delta-neg { background: var(--g2-light); color: var(--g2); }
+
+        /* Accent card for the global structural conservation score */
+        .kpi-card-accent { border-color: rgba(30,58,95,0.15); background: linear-gradient(135deg, #F0F4FA 0%, white 60%); }
+        .kpi-val-xl { font-family: 'JetBrains Mono', monospace; font-size: clamp(22px, 2.5vw, 30px); font-weight: 700; color: var(--navy); }
+
+        /* Chart card pair */
+        .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; flex-shrink: 0; }
+        .chart-card { background: white; border: 1px solid var(--border); border-radius: var(--r-lg); padding: 20px 20px 14px; box-shadow: var(--sh-sm); }
+        .chart-title-text { font-family: 'Fraunces', serif; font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 12px; letter-spacing: -0.2px; }
+
+        /* ── Vulnerable hub table ───────────────────────────────────────────── */
+        .hub-section { background: white; border: 1px solid var(--border); border-radius: var(--r-lg); padding: 22px 26px; box-shadow: var(--sh-sm); flex-shrink: 0; margin-bottom: 8px; }
+        .hub-section-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--border); gap: 20px; }
+        .hub-section-title { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 600; color: var(--text); letter-spacing: -0.2px; }
+        .hub-section-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-top: 4px; }
+        .hub-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .hub-table th { text-align: left; padding: 7px 12px; font-size: 9px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); font-weight: 700; border-bottom: 1px solid var(--border); }
+        .hub-table td { padding: 10px 12px; border-bottom: 1px solid #F5F4F1; vertical-align: middle; }
+        .hub-table tr:last-child td { border-bottom: none; }
+        .hub-table tbody tr { transition: background 0.12s; }
+        .hub-table tbody tr:hover { background: var(--surface-2); }
+
+        /* Status pill badges */
+        .status-pill { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 4px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        .status-ok   { background: var(--ok-light);   color: var(--ok); }
+        .status-warn { background: var(--warn-light);  color: var(--warn); }
+        .status-bad  { background: var(--g2-light);    color: var(--g2); }
+
+        /* Vulnerability bar mini-chart in the last column */
+        .vuln-bar-bg { width: 80px; height: 3px; background: var(--border); border-radius: 2px; }
+        .vuln-bar-fill { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
+        .vuln-bar-wrap { display: flex; align-items: center; gap: 8px; }
+        .vuln-score-val { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-2); }
+
+        /* ── Full-screen loading overlay ────────────────────────────────────── */
+        #loader {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(239,236,231,0.9); backdrop-filter: blur(12px);
+            z-index: 2000; justify-content: center; align-items: center;
+        }
+        .loader-box { background: white; border: 1px solid var(--border); border-radius: var(--r-lg); padding: 48px 52px; max-width: 440px; width: 100%; box-shadow: var(--sh-lg); text-align: center; }
+        .loader-spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--navy); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 26px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        #loader-main { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+        #loader-sub { font-size: 12px; color: var(--text-muted); margin-bottom: 26px; line-height: 1.5; }
+        .loader-progress-bg { width: 100%; height: 3px; background: var(--border); border-radius: 2px; margin-bottom: 18px; }
+        #loader-progress { height: 100%; background: var(--navy); border-radius: 2px; width: 0%; transition: width 0.7s cubic-bezier(0.16, 1, 0.3, 1); }
+
+        /* ── MuLaN alignment modal ──────────────────────────────────────────── */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); backdrop-filter: blur(6px); z-index: 2000; justify-content: center; align-items: center; }
+        .modal-box { background: white; border: 1px solid var(--border); border-radius: var(--r-lg); padding: 42px 44px; max-width: 390px; width: 100%; box-shadow: var(--sh-lg); text-align: center; }
+    </style>
+</head>
+<body>
+
+<!-- ── Sidebar ────────────────────────────────────────────────────────────── -->
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-mark">
+            <div class="brand-icon-wrap">🧠</div>
+            <div class="brand-text-wrap">
+                <div class="brand-name">Brain Network</div>
+                <div class="brand-tagline" data-i18n="brand_tagline">ANALISI MULTILAYER</div>
+            </div>
+        </div>
+    </div>
+
+    <nav class="sidebar-nav">
+        <!-- Home tab is always visible; Vis and Stats appear after data is loaded -->
+        <button class="nav-tab active" onclick="switchTab('tab-home', this)"><span class="ni">⌂</span> <span data-i18n="nav_home">Home</span></button>
+        <button class="nav-tab" id="btn-vis" onclick="switchTab('tab-vis', this)" style="display:none;"><span class="ni">⬡</span> <span data-i18n="nav_vis">Visualizzazione 3D</span></button>
+        <button class="nav-tab" id="btn-dash" onclick="switchTab('tab-dash', this)" style="display:none;"><span class="ni">◫</span> <span data-i18n="nav_dash">Dashboard Stats</span></button>
+    </nav>
+
+    <div class="sidebar-bottom">
+        <button id="btn-reset" onclick="resetApp()" data-i18n="btn_reset">↺ &nbsp;Nuova Analisi</button>
+
+        <!-- Language selector: IT / EN -->
+        <div class="lang-toggle">
+            <button class="lang-btn active" data-lang="it" onclick="setLang('it')">IT</button>
+            <button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+        </div>
+    </div>
+</aside>
+
+<!-- ── Main content ──────────────────────────────────────────────────────── -->
+<main class="main">
+
+<!-- Loading overlay shown while the server processes the uploaded files -->
+<div id="loader">
+    <div class="loader-box">
+        <div class="loader-spinner"></div>
+        <div id="loader-main">Inizializzazione...</div>
+        <div id="loader-sub">Preparazione dell'ambiente di analisi</div>
+        <div class="loader-progress-bg"><div id="loader-progress"></div></div>
+    </div>
+</div>
+
+<!-- ── HOME TAB ──────────────────────────────────────────────────────────── -->
+<div id="tab-home" class="tab-content active">
+    <div class="home-layout">
+        <!-- Hero / feature description column -->
+        <div class="home-hero">
+            <div class="hero-eyebrow" data-i18n="eyebrow">Tesi di Laurea Triennale | Ingegneria Informatica e Biomedica | Gullì Salvatore</div>
+            <h1 class="hero-title" data-i18n-html="hero_title">Analisi comparativa di<br><em>reti cerebrali</em></h1>
+            <p class="hero-desc" data-i18n="hero_desc">Piattaforma di visualizzazione e analisi topologica avanzata per reti cerebrali multilayer, basata sull'algoritmo MuLaN.</p>
+
+            <!-- Collapsible user guide -->
+            <div class="guide-section">
+                <button class="guide-toggle" onclick="toggleGuide(this)">
+                    <span class="guide-toggle-icon">▶</span>
+                    <span data-i18n="guide_toggle">GUIDA ALL'USO</span>
+                </button>
+                <div class="guide-body">
+                    <div class="guide-steps-list">
+                        <div class="guide-step-item">
+                            <div class="guide-step-num">1</div>
+                            <div class="guide-step-content">
+                                <div class="guide-step-title" data-i18n="gs1t">Nodi Seme — Atlas CSV</div>
+                                <div class="guide-step-desc">File CSV delle regioni di interesse (ROI) con coordinate MNI nel nome. Deve contenere le colonne <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:var(--surface-2);padding:1px 4px;border-radius:3px;">roi_id</code> e <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:var(--surface-2);padding:1px 4px;border-radius:3px;">roi_name</code> nel formato <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:var(--surface-2);padding:1px 4px;border-radius:3px;">Nome (x,y,z)</code>.</div>
+                                <div class="guide-step-badge" data-i18n="gs1_badge">Separatore: ; (punto e virgola)</div>
+                            </div>
+                        </div>
+                        <div class="guide-step-item">
+                            <div class="guide-step-num">2</div>
+                            <div class="guide-step-content">
+                                <div class="guide-step-title" data-i18n="gs2t">Archi Gruppo 1 &amp; 2 — Edge CSV</div>
+                                <div class="guide-step-desc">Due file CSV separati per il gruppo sani e il gruppo depressi. Colonne obbligatorie: <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:var(--surface-2);padding:1px 4px;border-radius:3px;">source_id</code>, <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:var(--surface-2);padding:1px 4px;border-radius:3px;">target_id</code>, <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:var(--surface-2);padding:1px 4px;border-radius:3px;">weight</code>, <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:var(--surface-2);padding:1px 4px;border-radius:3px;">layer</code> (1=music, 2=silence, 3=inter).</div>
+                                <div class="guide-step-badge" data-i18n="gs2_badge">Separatore: , (virgola)</div>
+                            </div>
+                        </div>
+                        <div class="guide-step-item">
+                            <div class="guide-step-num">3</div>
+                            <div class="guide-step-content">
+                                <div class="guide-step-title" data-i18n="gs3t">Visualizzazione 3D Interattiva</div>
+                                <div class="guide-step-desc" data-i18n="gs3d">Dopo il caricamento vedrai le due reti cerebrali affiancate in 3D. Usa i controlli a destra per filtrare layer, archi e nodi. Puoi zoomare su un singolo gruppo con i pulsanti nella barra in basso.</div>
+                            </div>
+                        </div>
+                        <div class="guide-step-item">
+                            <div class="guide-step-num">4</div>
+                            <div class="guide-step-content">
+                                <div class="guide-step-title" data-i18n="gs4t">Algoritmo MuLaN</div>
+                                <div class="guide-step-desc" data-i18n="gs4d">Lancia l'allineamento locale multilayer dalla barra strumenti. Scegli l'algoritmo di community detection (Louvain, Greedy, Infomap) e scarica edgelist, comunità e report.</div>
+                            </div>
+                        </div>
+                        <div class="guide-step-item">
+                            <div class="guide-step-num">5</div>
+                            <div class="guide-step-content">
+                                <div class="guide-step-title" data-i18n="gs5t">Dashboard Analitica</div>
+                                <div class="guide-step-desc" data-i18n="gs5d">Nella sezione Stats trovi le metriche topologiche comparate tra i due layer, il radar chart, le aree più alterate e la tabella completa degli hub vulnerabili. Puoi esportare un report PDF completo.</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="guide-note" data-i18n-html="guide_note">⚠ Gli ID nei file archi devono corrispondere ai <strong>roi_id</strong> presenti nel file atlas. Nodi con coordinate mancanti o malformate vengono scartati automaticamente.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- File upload column -->
+        <div class="home-upload">
+            <div class="upload-heading" data-i18n="upload_heading">Caricamento dati</div>
+            <div class="upload-sub" data-i18n="upload_sub">Carica i tre file CSV per avviare l'analisi.</div>
+            <div class="upload-steps">
+                <label class="upload-step" id="zone-atlas">
+                    <input type="file" id="f-atlas" accept=".csv" onchange="fileLoaded(this, 'l-atlas', 'zone-atlas')">
+                    <div class="step-num"><span class="step-num-num">1</span><span class="step-num-loaded">✓</span></div>
+                    <div class="step-body">
+                        <div class="step-label" data-i18n="step1_label">Nodi Seme (ROI)</div>
+                        <div class="step-file" id="l-atlas" data-i18n="no_file">Nessun file selezionato</div>
+                    </div>
+                </label>
+                <label class="upload-step" id="zone-sani">
+                    <input type="file" id="f-sani" accept=".csv" onchange="fileLoaded(this, 'l-sani', 'zone-sani')">
+                    <div class="step-num"><span class="step-num-num">2</span><span class="step-num-loaded">✓</span></div>
+                    <div class="step-body">
+                        <div class="step-label" data-i18n="step2_label">Archi | Gruppo 1</div>
+                        <div class="step-file" id="l-sani" data-i18n="no_file">Nessun file selezionato</div>
+                    </div>
+                </label>
+                <label class="upload-step" id="zone-depr">
+                    <input type="file" id="f-depr" accept=".csv" onchange="fileLoaded(this, 'l-depr', 'zone-depr')">
+                    <div class="step-num"><span class="step-num-num">3</span><span class="step-num-loaded">✓</span></div>
+                    <div class="step-body">
+                        <div class="step-label" data-i18n="step3_label">Archi | Gruppo 2</div>
+                        <div class="step-file" id="l-depr" data-i18n="no_file">Nessun file selezionato</div>
+                    </div>
+                </label>
+            </div>
+            <button class="btn-run" onclick="uploadData()" data-i18n="btn_analyze">Avvia Analisi</button>
+            <div id="error-banner"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ── VISUALIZATION TAB ──────────────────────────────────────────────────── -->
+<div id="tab-vis" class="tab-content">
+    <!-- Plotly 3-D scatter plot canvas -->
+    <div id="plot-3d"></div>
+
+    <!-- Transition overlay: fades in/out to smooth out trace swaps between views -->
+    <div id="view-overlay"></div>
+
+    <!-- Right-side controls panel -->
+    <div class="vis-panel">
+        <div class="vis-panel-top"><div class="vis-panel-title" data-i18n="vis_panel_title">Interagisci col Modello</div></div>
+        <div class="vis-panel-body">
+
+            <!-- Group 1 (Healthy) layer visibility toggles -->
+            <div class="ctrl-section">
+                <div id="ctrl-sani" style="transition: opacity 0.4s ease;">
+                    <div class="layer-group-head"><span class="lgdot" style="background:var(--g1-mid);"></span><span class="lg-name" data-i18n="g1_name">GRUPPO 1 — Sani</span></div>
+                    <button class="toggle-btn active sani" onclick="toggleGroup('mesh_s', this)" data-i18n="btn_mesh">🧠 Mesh e Nodi Cerebrali</button>
+                    <button class="toggle-btn sani" onclick="toggleGroup('edge_s', this)" data-i18n="btn_intra">≈ Archi Intra-Layer</button>
+                    <button class="toggle-btn sani" onclick="toggleGroup('edge_si', this)" data-i18n="btn_inter">↕ Archi Inter-Layer</button>
+                    <div style="margin-top: 7px; display:flex; gap: 5px;">
+                        <div style="flex:1; background:var(--g1-light); border:1px solid rgba(45,125,196,0.2); border-radius:6px; padding:5px 8px; font-size:9px; font-weight:700; color:var(--g1); text-align:center; letter-spacing:0.4px; text-transform:uppercase;" data-i18n="badge_music_g1">L1 — Musica</div>
+                        <div style="flex:1; background:var(--surface-2); border:1px solid var(--border); border-radius:6px; padding:5px 8px; font-size:9px; font-weight:700; color:var(--text-muted); text-align:center; letter-spacing:0.4px; text-transform:uppercase;" data-i18n="badge_silence">L2 — Silenzio</div>
+                    </div>
+                </div>
+
+                <!-- Group 2 (Depressed) layer visibility toggles -->
+                <div id="ctrl-depr" style="transition: opacity 0.4s ease; margin-top: 15px;">
+                    <div class="layer-group-head"><span class="lgdot" style="background:var(--g2-mid);"></span><span class="lg-name" data-i18n="g2_name">GRUPPO 2 — Depressi</span></div>
+                    <button class="toggle-btn active depr" onclick="toggleGroup('mesh_d', this)" data-i18n="btn_mesh">🧠 Mesh e Nodi Cerebrali</button>
+                    <button class="toggle-btn depr" onclick="toggleGroup('edge_d', this)" data-i18n="btn_intra">≈ Archi Intra-Layer</button>
+                    <button class="toggle-btn depr" onclick="toggleGroup('edge_di', this)" data-i18n="btn_inter">↕ Archi Inter-Layer</button>
+                    <div style="margin-top: 7px; display:flex; gap: 5px;">
+                        <div style="flex:1; background:var(--g2-light); border:1px solid rgba(220,38,38,0.2); border-radius:6px; padding:5px 8px; font-size:9px; font-weight:700; color:var(--g2); text-align:center; letter-spacing:0.4px; text-transform:uppercase;" data-i18n="badge_music_g2">L1 — Musica</div>
+                        <div style="flex:1; background:var(--surface-2); border:1px solid var(--border); border-radius:6px; padding:5px 8px; font-size:9px; font-weight:700; color:var(--text-muted); text-align:center; letter-spacing:0.4px; text-transform:uppercase;" data-i18n="badge_silence">L2 — Silenzio</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ctrl-divider"></div>
+
+            <!-- Node sizing mode selector -->
+            <div class="ctrl-section">
+                <span class="ctrl-label" data-i18n="ctrl_sizing">Dimensionamento Nodi</span>
+                <select id="sel-sizing" onchange="changeNodeSize(this.value)">
+                    <option value="default" data-i18n="sizing_default">Dimensione Uniforme</option>
+                    <option value="deg"     data-i18n="sizing_deg">Grado</option>
+                    <option value="bet"     data-i18n="sizing_bet">Betweenness Centrality</option>
+                    <option value="clu"     data-i18n="sizing_clu">Clustering Coefficient</option>
+                </select>
+            </div>
+
+            <div class="ctrl-divider"></div>
+
+            <!-- Conservation-score threshold slider — hides nodes below the cutoff -->
+            <div class="ctrl-section">
+                <span class="ctrl-label" data-i18n="ctrl_filter">Filtro Conservazione</span>
+                <div class="slider-val-label" id="slider-val" data-i18n="slider_all">Tutti i nodi visibili</div>
+                <div class="slider-ends">
+                    <span data-i18n="filter_low">Perso</span>
+                    <span data-i18n="filter_mid">Compensato</span>
+                    <span data-i18n="filter_high">Intatto</span>
+                </div>
+                <input type="range" id="cons-slider" min="0" max="100" value="0" step="5" oninput="filterByConservation(this.value)">
+            </div>
+
+            <div class="ctrl-divider"></div>
+
+            <!-- Node search: highlights the selected node and dims everything else -->
+            <div class="ctrl-section">
+                <span class="ctrl-label" data-i18n="ctrl_search">Cerca Nodo</span>
+                <input type="text" id="s_in" list="dl_nodes" data-i18n-ph="search_ph" placeholder="🔍" oninput="if(this.value==='') searchNode('')" onchange="searchNode(this.value)">
+                <datalist id="dl_nodes"></datalist>
+
+                <!-- Info card: populated when a node is selected via search -->
+                <div class="info-card">
+                    <div class="info-node-name" id="i_name">—</div>
+                    <div class="info-row"><span class="info-key" data-i18n="info_conservation">Conservazione</span><span id="i_sim" style="font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700;">—</span></div>
+                    <div class="info-row">
+                        <span class="info-key" data-i18n="info_deg">Grado G1 / G2</span>
+                        <span class="info-vals"><span class="info-val-sani" id="i_ds">—</span><span style="color:var(--text-muted);">/</span><span class="info-val-depr" id="i_dd">—</span></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-key" data-i18n="info_bet">Betweenness G1 / G2</span>
+                        <span class="info-vals"><span class="info-val-sani" id="i_bs">—</span><span style="color:var(--text-muted);">/</span><span class="info-val-depr" id="i_bd">—</span></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-key" data-i18n="info_clu">Clustering G1 / G2</span>
+                        <span class="info-vals"><span class="info-val-sani" id="i_cls">—</span><span style="color:var(--text-muted);">/</span><span class="info-val-depr" id="i_cld">—</span></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom floating toolbar for view switching and camera controls -->
+    <div class="vis-toolbar">
+        <div class="toolbar-inner">
+            <button class="tool-btn active" id="btn-view-global" onclick="setView('global')" data-i18n="toolbar_global">🌐 Overview</button>
+            <button class="tool-btn" id="btn-view-sani" onclick="setView('sani')" data-i18n="toolbar_g1">🔍 Gruppo 1</button>
+            <button class="tool-btn" id="btn-view-depr" onclick="setView('depr')" data-i18n="toolbar_g2">🔍 Gruppo 2</button>
+            <div class="divider"></div>
+            <button class="tool-btn btn-align-hero" onclick="showAlignmentModal()">Run MuLaN</button>
+            <div class="divider"></div>
+            <button class="tool-btn" id="b_rot" onclick="toggleRot()" data-i18n="toolbar_rot">↻ Rotazione</button>
+            <button class="tool-btn" onclick="resetView()" data-i18n="toolbar_reset">⊡ Reset Camera</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── MULAN ALIGNMENT MODAL ──────────────────────────────────────────────── -->
+<div id="alignment-modal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
+    <div class="modal-box">
+        <h2 style="font-family: 'Fraunces', serif; color: var(--navy); margin-top: 0; margin-bottom: 8px; font-size: 20px; letter-spacing: -0.3px;" data-i18n="modal_title">Configurazione MuLaN</h2>
+        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 20px; line-height: 1.65;" data-i18n="modal_desc">Allineamento locale per reti multilayer. Scegli l'algoritmo di community detection e avvia l'elaborazione.</p>
+        <label style="font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); display: block; margin-bottom: 7px;" data-i18n="modal_algo_label">Algoritmo Community Detection</label>
+        <select id="algo-select" style="width: 100%; padding: 11px 14px; margin-bottom: 20px; border-radius: 8px; border: 1px solid var(--border); font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text); background: var(--surface-2); outline: none; cursor: pointer;">
+            <option value="louvain"  data-i18n="algo_louvain">Louvain — veloce, ottimizzazione modularity</option>
+            <option value="greedy"   data-i18n="algo_greedy">Greedy Modularity — deterministico</option>
+            <option value="infomap"  data-i18n="algo_infomap">Infomap — basato sul flusso di informazione</option>
+        </select>
+        <button class="btn-run" id="btn-run-mulan" onclick="runMulan()" data-i18n="modal_btn_run">Avvia Algoritmo MuLaN</button>
+
+        <!-- Spinner shown while the server is processing the alignment -->
+        <div id="mulan-status" style="display:none; margin-top:18px; align-items:center; gap:10px; justify-content:center;">
+            <div style="width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--navy);border-radius:50%;animation:spin 0.7s linear infinite;flex-shrink:0;"></div>
+            <span style="font-size: 12px; color: var(--navy); font-weight: 600;" data-i18n="modal_processing">Elaborazione in corso...</span>
+        </div>
+
+        <!-- Result actions shown after a successful alignment run -->
+        <div id="mulan-results" style="display: none; margin-top: 20px;">
+            <p style="font-weight: bold; color: var(--ok); font-size:15px; margin-bottom:12px;" data-i18n="modal_done">✓ Allineamento Completato</p>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+                <button style="background:var(--g1-light); color:var(--navy); border:1px solid var(--g1-mid); padding:10px 14px; width:100%; border-radius:8px; cursor:pointer; font-weight:700; font-family:'DM Sans',sans-serif; font-size:12px; text-align:left;" onclick="downloadFile(RES_DATA.edgelist, 'Mulan_Aligned_Edgelist.txt')" data-i18n="modal_dl_edge">📥 Scarica Edgelist Supergrafo</button>
+                <button style="background:var(--surface-2); color:var(--text); border:1px solid var(--border); padding:10px 14px; width:100%; border-radius:8px; cursor:pointer; font-weight:700; font-family:'DM Sans',sans-serif; font-size:12px; text-align:left;" onclick="downloadFile(RES_DATA.communities, 'Mulan_Communities.txt')" data-i18n="modal_dl_comm">📥 Scarica Comunità Rilevate</button>
+                <button style="background:var(--surface-2); color:var(--text); border:1px solid var(--border); padding:10px 14px; width:100%; border-radius:8px; cursor:pointer; font-weight:700; font-family:'DM Sans',sans-serif; font-size:12px; text-align:left;" onclick="downloadFile(RES_DATA.log, 'Mulan_Summary.txt')" data-i18n="modal_dl_log">📥 Scarica Summary Report</button>
+            </div>
+            <button style="background:none; color:var(--text-muted); border:1px solid var(--border); padding:9px; width:100%; border-radius:8px; margin-top:16px; cursor:pointer; font-family:'DM Sans',sans-serif; font-size:12px;" onclick="document.getElementById('alignment-modal').style.display='none'" data-i18n="modal_close">Chiudi</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── DASHBOARD TAB ──────────────────────────────────────────────────────── -->
+<div id="tab-dash" class="tab-content">
+    <div class="dash-container">
+        <div class="dash-topbar">
+            <div class="dash-heading" style="display:flex; align-items:center; gap: 15px;">
+                <span data-i18n="dash_heading">Analisi Comparata Layer</span>
+                <select id="stats-group-select" onchange="updateDashboardStats()" style="width:auto; padding: 6px 12px; font-size: 14px; font-weight: bold; color: var(--navy); background: white; border-color: var(--navy); border-radius: 8px;">
+                    <option value="sani" data-i18n="group_g1">Gruppo 1 (Sani)</option>
+                    <option value="depr" data-i18n="group_g2">Gruppo 2 (Depressi)</option>
+                </select>
+            </div>
+            <div class="group-legend">
+                <div class="gl-item"><div class="gl-dot" style="background:var(--g1-mid);"></div>Layer 1</div>
+                <div class="gl-item"><div class="gl-dot" style="background:var(--g2-mid);"></div>Layer 2</div>
+                <button class="btn-run" onclick="exportPDF()" style="width: auto; padding: 8px 16px; margin-left: 10px;" data-i18n="btn_pdf">↓ DOWNLOAD REPORT PDF</button>
+            </div>
+        </div>
+
+        <!-- KPI metric cards -->
+        <div class="kpi-grid">
+            <div class="kpi-card"><div class="kpi-title" data-i18n="kpi_arc">Connessioni</div><div class="kpi-val-row"><div class="kpi-val" style="color:var(--g1);" id="k-arc-s">—</div><div class="kpi-val" style="color:var(--g2);" id="k-arc-d">—</div></div><div id="d-arc"></div></div>
+            <div class="kpi-card"><div class="kpi-title" data-i18n="kpi_den">Densità</div><div class="kpi-val-row"><div class="kpi-val" style="color:var(--g1);" id="k-den-s">—</div><div class="kpi-val" style="color:var(--g2);" id="k-den-d">—</div></div><div id="d-den"></div></div>
+            <div class="kpi-card"><div class="kpi-title" data-i18n="kpi_mod">Modularità</div><div class="kpi-val-row"><div class="kpi-val" style="color:var(--g1);" id="k-mod-s">—</div><div class="kpi-val" style="color:var(--g2);" id="k-mod-d">—</div></div><div id="d-mod"></div></div>
+            <div class="kpi-card"><div class="kpi-title" data-i18n="kpi_eff">Efficienza Globale</div><div class="kpi-val-row"><div class="kpi-val" style="color:var(--g1);" id="k-eff-s">—</div><div class="kpi-val" style="color:var(--g2);" id="k-eff-d">—</div></div><div id="d-eff"></div></div>
+            <div class="kpi-card"><div class="kpi-title" data-i18n="kpi_clu">Clustering Medio</div><div class="kpi-val-row"><div class="kpi-val" style="color:var(--g1);" id="k-clu-s">—</div><div class="kpi-val" style="color:var(--g2);" id="k-clu-d">—</div></div><div id="d-clu"></div></div>
+            <div class="kpi-card"><div class="kpi-title" data-i18n="kpi_tra">Transitività</div><div class="kpi-val-row"><div class="kpi-val" style="color:var(--g1);" id="k-tra-s">—</div><div class="kpi-val" style="color:var(--g2);" id="k-tra-d">—</div></div><div id="d-tra"></div></div>
+            <div class="kpi-card"><div class="kpi-title" data-i18n="kpi_sw">Small-World Index</div><div class="kpi-val-row"><div class="kpi-val" id="k-sw-s">—</div><div class="kpi-val" id="k-sw-d">—</div></div><div id="d-sw"></div></div>
+            <div class="kpi-card kpi-card-accent"><div class="kpi-title" data-i18n="kpi_sim">Conservazione Strutturale</div><div class="kpi-val-xl" id="k-gsim">—%</div></div>
+        </div>
+
+        <!-- Bar chart + radar chart row -->
+        <div class="chart-grid">
+            <div class="chart-card"><div class="chart-title-text" id="chart-bar-title" data-i18n="chart_bar">Aree Cerebrali Più Alterate</div><div id="plot-bar" style="height:340px; width:100%;"></div></div>
+            <div class="chart-card"><div class="chart-title-text" id="chart-radar-title" data-i18n="chart_radar">Impronta Topologica Comparata (Layer 1 vs 2)</div><div id="plot-radar" style="height:340px; width:100%;"></div></div>
+        </div>
+
+        <!-- Full vulnerable-hub ranking table -->
+        <div class="hub-section">
+            <div class="hub-section-head">
+                <div>
+                    <div class="hub-section-title" data-i18n="hub_title">Analisi Hub Vulnerabili — Tutti i Nodi</div>
+                    <div class="hub-section-desc" data-i18n="hub_desc">Tutti i nodi ordinati per score di vulnerabilità (Betweenness G1 × (1 − Conservazione)). Le prime 10 righe corrispondono agli hub critici.</div>
+                </div>
+            </div>
+            <div id="hub-table"></div>
+        </div>
+    </div>
+</div>
+
+</main>
+
+<script>
+/* ── Application state ──────────────────────────────────────────────────── */
+let DATA      = null;  // Full JSON payload returned by the /upload endpoint
+let FULL_DATA = null;  // Same reference, retained for search/highlight resets
+let RES_DATA  = null;  // MuLaN alignment result returned by /run_mulan
+let state = { rot: false, af: null, spd: 0.004, consThreshold: 0, sizingMode: 'default' };
+let currentView = 'global';
+
+/* ── Internationalisation (i18n) ────────────────────────────────────────── */
+// Active language code — defaults to Italian to match the original app
+let LANG = 'it';
+
+// Translation dictionary containing every user-facing string in both languages.
+// Keys are referenced both here (via setLang) and inline throughout JS functions.
+const T = {
+    it: {
+        brand_tagline: 'ANALISI MULTILAYER',
+        nav_home: 'Home', nav_vis: 'Visualizzazione 3D', nav_dash: 'Dashboard Stats',
+        btn_reset: '↺  Nuova Analisi',
+        upload_heading: 'Caricamento dati',
+        upload_sub: 'Carica i tre file CSV per avviare l\'analisi.',
+        step1_label: 'Nodi Seme (ROI)', step2_label: 'Archi | Gruppo 1', step3_label: 'Archi | Gruppo 2',
+        no_file: 'Nessun file selezionato',
+        btn_analyze: 'Avvia Analisi',
+        eyebrow: 'Tesi di Laurea Triennale | Ingegneria Informatica e Biomedica | Gullì Salvatore',
+        hero_title: 'Analisi comparativa di<br><em>reti cerebrali</em>',
+        hero_desc: 'Piattaforma di visualizzazione e analisi topologica avanzata per reti cerebrali multilayer, basata sull\'algoritmo MuLaN.',
+        guide_toggle: 'GUIDA ALL\'USO',
+        guide_note: '⚠ Gli ID nei file archi devono corrispondere ai <strong>roi_id</strong> presenti nel file atlas. Nodi con coordinate mancanti o malformate vengono scartati automaticamente.',
+        gs1t: 'Nodi Seme — Atlas CSV', gs1_badge: 'Separatore: ; (punto e virgola)',
+        gs2t: 'Archi Gruppo 1 & 2 — Edge CSV', gs2_badge: 'Separatore: , (virgola)',
+        gs3t: 'Visualizzazione 3D Interattiva', gs3d: 'Dopo il caricamento vedrai le due reti cerebrali affiancate in 3D. Usa i controlli a destra per filtrare layer, archi e nodi.',
+        gs4t: 'Algoritmo MuLaN', gs4d: 'Lancia l\'allineamento locale multilayer dalla barra strumenti. Scegli l\'algoritmo (Louvain, Greedy, Infomap) e scarica i risultati.',
+        gs5t: 'Dashboard Analitica', gs5d: 'Nella sezione Stats trovi le metriche topologiche comparate tra i due layer, il radar chart, le aree più alterate e la tabella completa degli hub vulnerabili. Puoi esportare un report PDF completo.',
+        vis_panel_title: 'Interagisci col Modello',
+        g1_name: 'GRUPPO 1 — Sani', g2_name: 'GRUPPO 2 — Depressi',
+        btn_mesh: '🧠 Mesh e Nodi Cerebrali', btn_intra: '≈ Archi Intra-Layer', btn_inter: '↕ Archi Inter-Layer',
+        badge_music_g1: 'L1 — Musica', badge_music_g2: 'L1 — Musica', badge_silence: 'L2 — Silenzio',
+        ctrl_sizing: 'Dimensionamento Nodi', ctrl_filter: 'Filtro Conservazione', ctrl_search: 'Cerca Nodo',
+        sizing_default: 'Dimensione Uniforme', sizing_deg: 'Grado', sizing_bet: 'Betweenness Centrality', sizing_clu: 'Clustering Coefficient',
+        slider_all: 'Tutti i nodi visibili', filter_low: 'Perso', filter_mid: 'Compensato', filter_high: 'Intatto',
+        search_ph: '🔍 Cerca area cerebrale...',
+        info_conservation: 'Conservazione', info_deg: 'Grado G1 / G2', info_bet: 'Betweenness G1 / G2', info_clu: 'Clustering G1 / G2',
+        toolbar_global: '🌐 Overview', toolbar_g1: '🔍 Gruppo 1', toolbar_g2: '🔍 Gruppo 2',
+        toolbar_rot: '↻ Rotazione', toolbar_reset: '⊡ Reset Camera',
+        dash_heading: 'Analisi Comparata Layer',
+        group_g1: 'Gruppo 1 (Sani)', group_g2: 'Gruppo 2 (Depressi)',
+        btn_pdf: '↓ DOWNLOAD REPORT PDF',
+        kpi_arc: 'Connessioni', kpi_den: 'Densità', kpi_mod: 'Modularità', kpi_eff: 'Efficienza Globale',
+        kpi_clu: 'Clustering Medio', kpi_tra: 'Transitività', kpi_sw: 'Small-World Index', kpi_sim: 'Conservazione Strutturale',
+        chart_bar: 'Aree Cerebrali Più Alterate', chart_radar: 'Impronta Topologica Comparata (Layer 1 vs 2)',
+        hub_title: 'Analisi Hub Vulnerabili — Tutti i Nodi',
+        hub_desc: 'Tutti i nodi ordinati per score di vulnerabilità (Betweenness G1 × (1 − Conservazione)). Le prime 10 righe corrispondono agli hub critici.',
+        hub_th_rank: '#', hub_th_area: 'Area Cerebrale', hub_th_bet: 'Betweenness G1',
+        hub_th_deg: 'Grado G1', hub_th_cons: 'Conservazione', hub_th_status: 'Stato', hub_th_vuln: 'Score Vulnerabilità',
+        modal_title: 'Configurazione MuLaN',
+        modal_desc: 'Allineamento locale per reti multilayer. Scegli l\'algoritmo di community detection e avvia l\'elaborazione.',
+        modal_algo_label: 'Algoritmo Community Detection',
+        modal_btn_run: 'Avvia Algoritmo MuLaN', modal_processing: 'Elaborazione in corso...',
+        modal_done: '✓ Allineamento Completato', modal_dl_edge: '📥 Scarica Edgelist Supergrafo',
+        modal_dl_comm: '📥 Scarica Comunità Rilevate', modal_dl_log: '📥 Scarica Summary Report', modal_close: 'Chiudi',
+        algo_louvain: 'Louvain — veloce, ottimizzazione modularity',
+        algo_greedy: 'Greedy Modularity — deterministico',
+        algo_infomap: 'Infomap — basato sul flusso di informazione',
+        status_intact: 'Intatto', status_comp: 'Compensato', status_lost: 'Perso',
+        loader_0: 'Caricamento dati...', loader_0s: 'Lettura atlas e archi',
+        loader_1: 'Costruzione grafi...', loader_1s: 'Creazione reti multilayer G1 e G2',
+        loader_2: 'Calcolo metriche...', loader_2s: 'Densità, modularità, efficienza',
+        loader_3: 'Allineamento MuLaN...', loader_3s: 'Calcolo punteggi di conservazione',
+        loader_4: 'Rendering 3D...', loader_4s: 'Preparazione visualizzazione interattiva',
+        err_files: 'Caricare tutti e tre i file.', err_server: 'Errore durante il caricamento dal Server',
+        radar_labels: ['Densità','Modularità','Efficienza','Clustering','Transitività','Densità'],
+        bar_xaxis: 'Indice di Conservazione',
+        nd: 'N/D',
+    },
+    en: {
+        brand_tagline: 'MULTILAYER ANALYSIS',
+        nav_home: 'Home', nav_vis: '3D Visualization', nav_dash: 'Stats Dashboard',
+        btn_reset: '↺  New Analysis',
+        upload_heading: 'Load Data',
+        upload_sub: 'Upload all three CSV files to start the analysis.',
+        step1_label: 'Seed Nodes (ROI)', step2_label: 'Edges | Group 1', step3_label: 'Edges | Group 2',
+        no_file: 'No file selected',
+        btn_analyze: 'Run Analysis',
+        eyebrow: 'Bachelor\'s Thesis | Computer & Biomedical Engineering | Gullì Salvatore',
+        hero_title: 'Comparative analysis of<br><em>brain networks</em>',
+        hero_desc: 'An advanced platform for topological visualisation and analysis of multilayer brain networks, powered by the MuLaN algorithm.',
+        guide_toggle: 'USER GUIDE',
+        guide_note: '⚠ Node IDs in the edge files must match the <strong>roi_id</strong> values in the atlas file. Nodes with missing or malformed coordinates are automatically discarded.',
+        gs1t: 'Seed Nodes — Atlas CSV', gs1_badge: 'Separator: ; (semicolon)',
+        gs2t: 'Group 1 & 2 Edges — Edge CSV', gs2_badge: 'Separator: , (comma)',
+        gs3t: 'Interactive 3D Visualization', gs3d: 'After loading you will see both brain networks side by side in 3D. Use the controls on the right to filter layers, edges and nodes.',
+        gs4t: 'MuLaN Algorithm', gs4d: 'Launch the multilayer local alignment from the toolbar. Select a community detection algorithm (Louvain, Greedy, Infomap) and download the results.',
+        gs5t: 'Analytics Dashboard', gs5d: 'The Stats section shows comparative topological metrics between the two layers, the radar chart, the most altered areas, and the full vulnerable hub table. Export a complete PDF report.',
+        vis_panel_title: 'Interact with Model',
+        g1_name: 'GROUP 1 — Healthy', g2_name: 'GROUP 2 — Depressed',
+        btn_mesh: '🧠 Brain Mesh & Nodes', btn_intra: '≈ Intra-Layer Edges', btn_inter: '↕ Inter-Layer Edges',
+        badge_music_g1: 'L1 — Music', badge_music_g2: 'L1 — Music', badge_silence: 'L2 — Silence',
+        ctrl_sizing: 'Node Sizing', ctrl_filter: 'Conservation Filter', ctrl_search: 'Search Node',
+        sizing_default: 'Uniform Size', sizing_deg: 'Degree', sizing_bet: 'Betweenness Centrality', sizing_clu: 'Clustering Coefficient',
+        slider_all: 'All nodes visible', filter_low: 'Lost', filter_mid: 'Compensated', filter_high: 'Intact',
+        search_ph: '🔍 Search brain area...',
+        info_conservation: 'Conservation', info_deg: 'Degree G1 / G2', info_bet: 'Betweenness G1 / G2', info_clu: 'Clustering G1 / G2',
+        toolbar_global: '🌐 Overview', toolbar_g1: '🔍 Group 1', toolbar_g2: '🔍 Group 2',
+        toolbar_rot: '↻ Rotation', toolbar_reset: '⊡ Reset Camera',
+        dash_heading: 'Comparative Layer Analysis',
+        group_g1: 'Group 1 (Healthy)', group_g2: 'Group 2 (Depressed)',
+        btn_pdf: '↓ DOWNLOAD PDF REPORT',
+        kpi_arc: 'Connections', kpi_den: 'Density', kpi_mod: 'Modularity', kpi_eff: 'Global Efficiency',
+        kpi_clu: 'Mean Clustering', kpi_tra: 'Transitivity', kpi_sw: 'Small-World Index', kpi_sim: 'Structural Conservation',
+        chart_bar: 'Most Altered Brain Areas', chart_radar: 'Comparative Topological Fingerprint (Layer 1 vs 2)',
+        hub_title: 'Vulnerable Hub Analysis — All Nodes',
+        hub_desc: 'All nodes ranked by vulnerability score (Betweenness G1 × (1 − Conservation)). The top 10 rows are the critical hubs.',
+        hub_th_rank: '#', hub_th_area: 'Brain Area', hub_th_bet: 'Betweenness G1',
+        hub_th_deg: 'Degree G1', hub_th_cons: 'Conservation', hub_th_status: 'Status', hub_th_vuln: 'Vulnerability Score',
+        modal_title: 'MuLaN Configuration',
+        modal_desc: 'Local alignment for multilayer networks. Choose a community detection algorithm and start processing.',
+        modal_algo_label: 'Community Detection Algorithm',
+        modal_btn_run: 'Run MuLaN Algorithm', modal_processing: 'Processing...',
+        modal_done: '✓ Alignment Complete', modal_dl_edge: '📥 Download Supergraph Edgelist',
+        modal_dl_comm: '📥 Download Detected Communities', modal_dl_log: '📥 Download Summary Report', modal_close: 'Close',
+        algo_louvain: 'Louvain — fast, modularity optimisation',
+        algo_greedy: 'Greedy Modularity — deterministic',
+        algo_infomap: 'Infomap — information-flow based',
+        status_intact: 'Intact', status_comp: 'Compensated', status_lost: 'Lost',
+        loader_0: 'Loading data...', loader_0s: 'Reading atlas and edges',
+        loader_1: 'Building graphs...', loader_1s: 'Creating G1 and G2 multilayer networks',
+        loader_2: 'Computing metrics...', loader_2s: 'Density, modularity, efficiency',
+        loader_3: 'MuLaN alignment...', loader_3s: 'Computing per-node conservation scores',
+        loader_4: 'Rendering 3D...', loader_4s: 'Preparing interactive visualisation',
+        err_files: 'Please load all three files.', err_server: 'Server error during upload',
+        radar_labels: ['Density','Modularity','Efficiency','Clustering','Transitivity','Density'],
+        bar_xaxis: 'Conservation Index',
+        nd: 'N/A',
+    }
+};
+
+/**
+ * Switches the active UI language. Updates every element carrying a data-i18n
+ * or data-i18n-html attribute, refreshes placeholder text, and rebuilds any
+ * dynamic content (hub table, dashboard stats, radar labels) that already
+ * exists in the DOM so it reflects the new language immediately.
+ */
+function setLang(lang) {
+    LANG = lang;
+    document.documentElement.lang = lang;
+
+    // Sync all static text nodes
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (T[lang][key] !== undefined) el.textContent = T[lang][key];
+    });
+
+    // Sync elements whose content contains HTML markup (e.g. <em>, <strong>)
+    document.querySelectorAll('[data-i18n-html]').forEach(el => {
+        const key = el.getAttribute('data-i18n-html');
+        if (T[lang][key] !== undefined) el.innerHTML = T[lang][key];
+    });
+
+    // Sync input placeholders
+    document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+        const key = el.getAttribute('data-i18n-ph');
+        if (T[lang][key] !== undefined) el.placeholder = T[lang][key];
+    });
+
+    // Highlight the active language button
+    document.querySelectorAll('.lang-btn').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-lang') === lang);
+    });
+
+    // Refresh the slider label in case data is already loaded
+    const sliderEl = document.getElementById('slider-val');
+    if (sliderEl && state.consThreshold === 0) {
+        sliderEl.textContent = T[lang].slider_all;
+    }
+
+    // Rebuild dynamic content so its language updates in place
+    if (DATA) {
+        buildHubDetector();
+        updateDashboardStats();
+        // Re-render the bar chart x-axis label
+        Plotly.relayout('plot-bar', { 'xaxis.title.text': T[lang].bar_xaxis });
+    }
+}
+
+/* ── Guide section ──────────────────────────────────────────────────────── */
+
+/**
+ * Toggles the collapsible guide body below the guide toggle button.
+ * Relies on the 'open' CSS class to animate the max-height transition.
+ */
+function toggleGuide(btn) {
+    btn.classList.toggle('open');
+    btn.nextElementSibling.classList.toggle('open');
+}
+
+/* ── Status helpers ─────────────────────────────────────────────────────── */
+
+/**
+ * Maps a conservation score (0–1) to a localised label, a CSS colour value
+ * for screen display, and a hex colour for PDF embedding.
+ */
+function getStatus(score) {
+    if (score === 1.0) return { label: T[LANG].status_intact, color: '#166534', colorPdf: '#166534' };
+    if (score >= 0.5)  return { label: T[LANG].status_comp,   color: '#92400E', colorPdf: '#92400E' };
+    return                    { label: T[LANG].status_lost,   color: '#9B1C1C', colorPdf: '#9B1C1C' };
+}
+
+/* ── Loading overlay ────────────────────────────────────────────────────── */
+let loaderInterval = null;
+let loaderStep = 0;
+
+/**
+ * Starts the animated loading overlay, cycling through step messages at
+ * 1.8-second intervals and advancing the progress bar proportionally.
+ */
+function startLoader() {
+    const msgs = [
+        [T[LANG].loader_0, T[LANG].loader_0s],
+        [T[LANG].loader_1, T[LANG].loader_1s],
+        [T[LANG].loader_2, T[LANG].loader_2s],
+        [T[LANG].loader_3, T[LANG].loader_3s],
+        [T[LANG].loader_4, T[LANG].loader_4s],
+    ];
+    loaderStep = 0;
+    document.getElementById('loader').style.display = 'flex';
+    document.getElementById('loader-progress').style.width = '0%';
+    function tick() {
+        if (loaderStep < msgs.length) {
+            document.getElementById('loader-main').textContent = msgs[loaderStep][0];
+            document.getElementById('loader-sub').textContent  = msgs[loaderStep][1];
+            document.getElementById('loader-progress').style.width = ((loaderStep + 1) / msgs.length * 90) + '%';
+            loaderStep++;
+        }
+    }
+    tick();
+    loaderInterval = setInterval(tick, 1800);
+}
+
+/** Completes the progress bar and hides the loading overlay. */
+function stopLoader() {
+    clearInterval(loaderInterval);
+    document.getElementById('loader-progress').style.width = '100%';
+    setTimeout(() => { document.getElementById('loader').style.display = 'none'; }, 350);
+}
+
+/* ── File upload helpers ────────────────────────────────────────────────── */
+
+/**
+ * Called by each file-input's onchange handler. Updates the label with the
+ * selected filename and marks the upload row as loaded.
+ */
+function fileLoaded(input, labelId, zoneId) {
+    if (input.files && input.files[0]) {
+        document.getElementById(labelId).textContent = input.files[0].name;
+        document.getElementById(zoneId).classList.add('loaded');
+    }
+}
+
+/* ── Tab switching ──────────────────────────────────────────────────────── */
+
+/**
+ * Activates the requested tab panel and the corresponding nav button.
+ * Fires a resize event after a short delay so Plotly redraws at the correct
+ * dimensions when switching back to the visualisation tab.
+ */
+function switchTab(tabId, btn) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    btn.classList.add('active');
+    if (DATA) setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
+}
+
+/* ── Error notification ─────────────────────────────────────────────────── */
+
+/** Displays an error message in the banner strip and auto-hides after 10 s. */
+function showError(msg) {
+    const el = document.getElementById('error-banner');
+    if (el) { el.innerHTML = '⚠ ' + msg; el.style.display = 'block'; setTimeout(() => el.style.display = 'none', 10000); }
+}
+
+/* ── Main upload and data processing ───────────────────────────────────── */
+
+/**
+ * Reads all three file inputs, POSTs them as multipart form-data to the
+ * Flask /upload endpoint, and wires up the returned JSON to the 3-D renderer
+ * and the analytics dashboard.
+ */
+async function uploadData() {
+    const f1 = document.getElementById('f-atlas').files[0];
+    const f2 = document.getElementById('f-sani').files[0];
+    const f3 = document.getElementById('f-depr').files[0];
+    if (!f1 || !f2 || !f3) { showError(T[LANG].err_files); return; }
+
+    const fd = new FormData();
+    fd.append('atlas', f1); fd.append('edges_sani', f2); fd.append('edges_depr', f3);
+
+    startLoader();
+    try {
+        const res = await fetch('/upload', { method: 'POST', body: fd });
+        if (!res.ok) throw new Error(T[LANG].err_server);
+        DATA = await res.json();
+        if (DATA.error) throw new Error(DATA.error);
+
+        // Populate the node search autocomplete list
+        const dl = document.getElementById('dl_nodes');
+        dl.innerHTML = '';
+        DATA.nodes.names.forEach(n => { const o = document.createElement('option'); o.value = n; dl.appendChild(o); });
+
+        render3D(DATA);
+        if (typeof buildDashboard === 'function') buildDashboard();
+
+        stopLoader();
+        document.getElementById('btn-vis').style.display  = 'flex';
+        document.getElementById('btn-dash').style.display = 'flex';
+        document.getElementById('btn-reset').style.display = 'block';
+        switchTab('tab-vis', document.getElementById('btn-vis'));
+    } catch(e) { stopLoader(); showError('Error: ' + e.message); }
+}
+
+/* ── 3-D rendering ──────────────────────────────────────────────────────── */
+
+/**
+ * Builds all Plotly traces for both multilayer brain networks and calls
+ * Plotly.newPlot. The two groups are separated horizontally by ±OFFSET_X MNI
+ * units, and each group's two layers are separated vertically by OFFSET_Z.
+ *
+ * Trace index map (referenced by setView and toggleGroup):
+ *   0  mesh_s L1  |  1  mesh_s L2  |  2  mesh_d L1  |  3  mesh_d L2
+ *   4  edge_s L1  |  5  edge_s L2  |  6  edge_si     |
+ *   7  edge_d L1  |  8  edge_d L2  |  9  edge_di     |
+ *   10 node_s L1  | 11  node_s L2  | 12  node_d L1   | 13 node_d L2
+ */
+function render3D(d) {
+    const OFFSET_X = 130;
+    const OFFSET_Z = 150;
+    const mapA = (arr, fn) => arr.map(v => v === null ? null : fn(v));
+
+    // Compute horizontal and vertical offsets for each group / layer pair
+    const m_s_x = mapA(d.mesh.x, x => x - OFFSET_X);
+    const m_d_x = mapA(d.mesh.x, x => x + OFFSET_X);
+    const m_z1  = d.mesh.z;
+    const m_z2  = mapA(d.mesh.z, z => z + OFFSET_Z);
+
+    const n_s_x = mapA(d.nodes.base_x, x => x - OFFSET_X);
+    const n_d_x = mapA(d.nodes.base_x, x => x + OFFSET_X);
+    const n_z1  = d.nodes.base_z;
+    const n_z2  = mapA(d.nodes.base_z, z => z + OFFSET_Z);
+
+    const es1_x = mapA(d.edges.s1.x, x => x - OFFSET_X);
+    const es2_x = mapA(d.edges.s2.x, x => x - OFFSET_X);
+    const esi_x = mapA(d.edges.si.x, x => x - OFFSET_X);
+    const es1_z = d.edges.s1.z;
+    const es2_z = mapA(d.edges.s2.z, z => z - 80 + OFFSET_Z);
+    const esi_z = [];
+    for(let i=0; i<d.edges.si.z.length; i+=3) esi_z.push(d.edges.si.z[i], d.edges.si.z[i+1] - 80 + OFFSET_Z, null);
+
+    const ed1_x = mapA(d.edges.d1.x, x => x + OFFSET_X);
+    const ed2_x = mapA(d.edges.d2.x, x => x + OFFSET_X);
+    const edi_x = mapA(d.edges.di.x, x => x + OFFSET_X);
+    const ed1_z = mapA(d.edges.d1.z, z => z - 200);
+    const ed2_z = mapA(d.edges.d2.z, z => z - 280 + OFFSET_Z);
+    const edi_z = [];
+    for(let i=0; i<d.edges.di.z.length; i+=3) edi_z.push(d.edges.di.z[i] - 200, d.edges.di.z[i+1] - 280 + OFFSET_Z, null);
+
+    // Persist the offset arrays on the data object so searchNode can restore them
+    d.edges.s1.x_off = es1_x; d.edges.s2.x_off = es2_x; d.edges.si.x_off = esi_x;
+    d.edges.s1.z_off = es1_z; d.edges.s2.z_off = es2_z; d.edges.si.z_off = esi_z;
+    d.edges.d1.x_off = ed1_x; d.edges.d2.x_off = ed2_x; d.edges.di.x_off = edi_x;
+    d.edges.d1.z_off = ed1_z; d.edges.d2.z_off = ed2_z; d.edges.di.z_off = edi_z;
+    FULL_DATA = d;
+
+    // Node trace factory — colour distinguishes Group 1 (blue) from Group 2 (red)
+    const createNodes = (x_arr, z_arr, colorStr) => ({
+        type: 'scatter3d', mode: 'markers',
+        x: x_arr, y: d.nodes.base_y, z: z_arr,
+        text: d.nodes.names.map(n => `<b>${n}</b>`),
+        marker: { size: 5, color: colorStr, line: {width: 1, color: '#1a2236'} },
+        hovertemplate: '%{text}<extra></extra>',
+        showlegend: false
+    });
+
+    // Brain mesh traces — semi-transparent to let the nodes show through
+    const t_m_s1 = { type:'mesh3d', x:m_s_x, y:d.mesh.y, z:m_z1, i:d.mesh.i, j:d.mesh.j, k:d.mesh.k, opacity:0.1, color:'#3498db', hoverinfo:'none', showlegend:false };
+    const t_m_s2 = { type:'mesh3d', x:m_s_x, y:d.mesh.y, z:m_z2, i:d.mesh.i, j:d.mesh.j, k:d.mesh.k, opacity:0.1, color:'#2980b9', hoverinfo:'none', showlegend:false };
+    const t_m_d1 = { type:'mesh3d', x:m_d_x, y:d.mesh.y, z:m_z1, i:d.mesh.i, j:d.mesh.j, k:d.mesh.k, opacity:0.1, color:'#e74c3c', hoverinfo:'none', showlegend:false };
+    const t_m_d2 = { type:'mesh3d', x:m_d_x, y:d.mesh.y, z:m_z2, i:d.mesh.i, j:d.mesh.j, k:d.mesh.k, opacity:0.1, color:'#c0392b', hoverinfo:'none', showlegend:false };
+
+    // Edge traces — yellow for inter-layer connectors, group colours for intra-layer
+    const t_e_s1 = { type:'scatter3d', mode:'lines', x:es1_x, y:d.edges.s1.y, z:es1_z, line:{width:1.5, color:'#3498db'}, hoverinfo:'none', showlegend:false };
+    const t_e_s2 = { type:'scatter3d', mode:'lines', x:es2_x, y:d.edges.s2.y, z:es2_z, line:{width:1.5, color:'#2980b9'}, hoverinfo:'none', showlegend:false };
+    const t_e_si = { type:'scatter3d', mode:'lines', x:esi_x, y:d.edges.si.y, z:esi_z, line:{width:2.5, color:'#f1c40f'}, hoverinfo:'none', showlegend:false };
+    const t_e_d1 = { type:'scatter3d', mode:'lines', x:ed1_x, y:d.edges.d1.y, z:ed1_z, line:{width:1.5, color:'#e74c3c'}, hoverinfo:'none', showlegend:false };
+    const t_e_d2 = { type:'scatter3d', mode:'lines', x:ed2_x, y:d.edges.d2.y, z:ed2_z, line:{width:1.5, color:'#c0392b'}, hoverinfo:'none', showlegend:false };
+    const t_e_di = { type:'scatter3d', mode:'lines', x:edi_x, y:d.edges.di.y, z:edi_z, line:{width:2.5, color:'#f39c12'}, hoverinfo:'none', showlegend:false };
+
+    const t_n_s1 = createNodes(n_s_x, n_z1, '#2D7DC4');
+    const t_n_s2 = createNodes(n_s_x, n_z2, '#2D7DC4');
+    const t_n_d1 = createNodes(n_d_x, n_z1, '#DC2626');
+    const t_n_d2 = createNodes(n_d_x, n_z2, '#DC2626');
+
+    const layout = {
+        margin: {l:0, r:0, b:0, t:0}, paper_bgcolor: 'transparent',
+        scene: {
+            xaxis: {visible:false, showspikes:false, range:[-350, 350]},
+            yaxis: {visible:false, showspikes:false, range:[-350, 350]},
+            zaxis: {visible:false, showspikes:false, range:[-150, 300]},
+            aspectmode: 'cube',
+            camera: { eye: {x:0, y:-1.6, z:0}, center: {x:0, y:0, z:0}, up: {x:0, y:0, z:1} }
+        }
+    };
+
+    Plotly.newPlot('plot-3d', [
+        t_m_s1, t_m_s2, t_m_d1, t_m_d2,
+        t_e_s1, t_e_s2, t_e_si,
+        t_e_d1, t_e_d2, t_e_di,
+        t_n_s1, t_n_s2, t_n_d1, t_n_d2
+    ], layout, {displayModeBar: false, responsive: true}).then(() => {
+        setView('global');
+    });
+}
+
+/* ── Camera animation ───────────────────────────────────────────────────── */
+
+/**
+ * Animates the Plotly 3-D camera from its current position to the target
+ * eye/center coordinates using a cubic ease-in-out curve over 80 frames
+ * (~1.3 seconds at 60 fps). This gives transitions a polished, deliberate
+ * feel instead of snapping instantly to the new position.
+ */
+function smoothCamera(eye, center) {
+    const plotDiv = document.getElementById('plot-3d');
+    if (!plotDiv || !plotDiv.layout) return;
+    const curEye = plotDiv.layout.scene.camera ? plotDiv.layout.scene.camera.eye : {x:0,y:-1.6,z:0};
+    const curCen = plotDiv.layout.scene.camera ? plotDiv.layout.scene.camera.center : {x:0,y:0,z:0};
+    const STEPS = 80;
+    let step = 0;
+
+    // Cubic ease-in-out: slow start, fast middle, slow end
+    function ease(t) { return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3)/2; }
+
+    function frame() {
+        step++;
+        const t  = ease(step / STEPS);
+        const ex = curEye.x + (eye.x - curEye.x) * t;
+        const ey = curEye.y + (eye.y - curEye.y) * t;
+        const ez = curEye.z + (eye.z - curEye.z) * t;
+        const cx = curCen.x + (center.x - curCen.x) * t;
+        const cy = curCen.y + (center.y - curCen.y) * t;
+        const cz = curCen.z + (center.z - curCen.z) * t;
+        Plotly.relayout('plot-3d', {
+            'scene.camera.eye':    {x:ex, y:ey, z:ez},
+            'scene.camera.center': {x:cx, y:cy, z:cz}
+        });
+        if (step < STEPS) requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+}
+
+/* ── View switching ─────────────────────────────────────────────────────── */
+
+/**
+ * Switches the active 3-D view between Overview, Group 1, and Group 2.
+ *
+ * A semi-transparent overlay fades in before the Plotly trace swap and fades
+ * out afterwards, masking the abrupt visibility change and giving the
+ * transition a premium feel. The camera then glides to the target position
+ * via smoothCamera.
+ */
+function setView(mode) {
+    currentView = mode;
+    document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('btn-view-' + mode).classList.add('active');
+
+    const pSani   = document.getElementById('ctrl-sani');
+    const pDepr   = document.getElementById('ctrl-depr');
+    const overlay = document.getElementById('view-overlay');
+
+    // Fade the overlay in to conceal the trace swap
+    overlay.style.opacity      = '1';
+    overlay.style.pointerEvents = 'all';
+
+    setTimeout(() => {
+        if (mode === 'global') {
+            // Show only the first layer of each group; hide multi-layer detail
+            Plotly.restyle('plot-3d', {visible: true},  [0, 2, 10, 12]);
+            Plotly.restyle('plot-3d', {visible: false}, [1, 3, 4, 5, 6, 7, 8, 9, 11, 13]);
+            smoothCamera({x:0, y:-1.6, z:0}, {x:0, y:0, z:0});
+            pSani.style.opacity = '0.3'; pSani.style.pointerEvents = 'none';
+            pDepr.style.opacity = '0.3'; pDepr.style.pointerEvents = 'none';
+        } else if (mode === 'sani') {
+            // Focus on Group 1 — show both its layers and the inter-layer edges
+            Plotly.restyle('plot-3d', {visible: true},  [0, 1, 4, 5, 6, 10, 11]);
+            Plotly.restyle('plot-3d', {visible: false}, [2, 3, 7, 8, 9, 12, 13]);
+            smoothCamera({x:-1.2, y:-1.1, z:0.1}, {x:-0.15, y:0, z:0});
+            pSani.style.opacity = '1'; pSani.style.pointerEvents = 'auto';
+            pDepr.style.opacity = '0.3'; pDepr.style.pointerEvents = 'none';
+        } else if (mode === 'depr') {
+            // Focus on Group 2 — symmetric to 'sani' on the right side
+            Plotly.restyle('plot-3d', {visible: true},  [2, 3, 7, 8, 9, 12, 13]);
+            Plotly.restyle('plot-3d', {visible: false}, [0, 1, 4, 5, 6, 10, 11]);
+            smoothCamera({x:1.2, y:-1.1, z:0.1}, {x:0.15, y:0, z:0});
+            pSani.style.opacity = '0.3'; pSani.style.pointerEvents = 'none';
+            pDepr.style.opacity = '1'; pDepr.style.pointerEvents = 'auto';
+        }
+
+        // Fade the overlay back out after the camera has begun moving
+        setTimeout(() => {
+            overlay.style.opacity      = '0';
+            overlay.style.pointerEvents = 'none';
+        }, 350);
+
+        // Reapply the active search highlight if a node was being searched
+        const searchVal = document.getElementById('s_in').value;
+        if (searchVal) searchNode(searchVal);
+    }, 200);
+}
+
+/* ── Layer visibility toggles ───────────────────────────────────────────── */
+
+/**
+ * Toggles the visibility of a named group of Plotly traces. Only works in
+ * single-group focus views (sani/depr) — in the global overview the side
+ * panel controls are dimmed and non-interactive.
+ */
+function toggleGroup(group, btn) {
+    if (currentView === 'global') return;
+    btn.classList.toggle('active');
+    const isVis = btn.classList.contains('active');
+    let targets = [];
+    if(group === 'mesh_s')  targets = [0, 1, 10, 11];
+    if(group === 'mesh_d')  targets = [2, 3, 12, 13];
+    if(group === 'edge_s')  targets = [4, 5];
+    if(group === 'edge_d')  targets = [7, 8];
+    if(group === 'edge_si') targets = [6];
+    if(group === 'edge_di') targets = [9];
+    Plotly.restyle('plot-3d', {visible: isVis}, targets);
+}
+
+/* ── Node sizing / conservation filter ─────────────────────────────────── */
+
+/**
+ * Recomputes node marker sizes for all four node traces based on the current
+ * sizing mode and conservation threshold. Nodes below the threshold are set
+ * to near-zero size rather than hidden, preserving hover interactivity.
+ */
+function applyNodeStyling() {
+    const threshold = state.consThreshold;
+    const metric    = state.sizingMode;
+    let sizes_s, sizes_d;
+
+    if (metric === 'default') {
+        sizes_s = DATA.nodes.scores.map(s => s >= threshold ? 6 : 0.01);
+        sizes_d = [...sizes_s];
+    } else {
+        const v_s = DATA.nodes.metrics_sani[metric], v_d = DATA.nodes.metrics_depr[metric];
+        const min_s = Math.min(...v_s), max_s = Math.max(...v_s);
+        const min_d = Math.min(...v_d), max_d = Math.max(...v_d);
+        sizes_s = v_s.map((v, i) => DATA.nodes.scores[i] < threshold ? 0.01 : (max_s > min_s ? 5 + ((v-min_s)/(max_s-min_s))*25 : 6));
+        sizes_d = v_d.map((v, i) => DATA.nodes.scores[i] < threshold ? 0.01 : (max_d > min_d ? 5 + ((v-min_d)/(max_d-min_d))*25 : 6));
+    }
+    Plotly.restyle('plot-3d', {'marker.size': [sizes_s, sizes_s, sizes_d, sizes_d]}, [10, 11, 12, 13]);
+}
+
+/** Updates the sizing mode and re-renders node markers. */
+function changeNodeSize(metric) { state.sizingMode = metric; applyNodeStyling(); }
+
+/** Updates the conservation threshold and refreshes node visibility. */
+function filterByConservation(val) {
+    const threshold = val / 100;
+    state.consThreshold = threshold;
+    document.getElementById('slider-val').textContent =
+        threshold === 0 ? T[LANG].slider_all : `${T[LANG].filter_high} ≥ ${(threshold*100).toFixed(0)}%`;
+    applyNodeStyling();
+}
+
+/* ── Node search and highlight ──────────────────────────────────────────── */
+
+/**
+ * Highlights the queried node in the 3-D plot and populates the info card
+ * with its metrics. When the search field is cleared, all traces are restored
+ * to their default appearance. Edge filtering is view-aware: in focus views
+ * only the selected node's connections are shown; in the overview, edges are
+ * hidden entirely to avoid visual clutter.
+ */
+function searchNode(val) {
+    if (!val) {
+        // Restore all edge and node traces to their default state
+        Plotly.restyle('plot-3d', {
+            x: [FULL_DATA.edges.s1.x_off, FULL_DATA.edges.s2.x_off, FULL_DATA.edges.si.x_off, FULL_DATA.edges.d1.x_off, FULL_DATA.edges.d2.x_off, FULL_DATA.edges.di.x_off],
+            y: [FULL_DATA.edges.s1.y,     FULL_DATA.edges.s2.y,     FULL_DATA.edges.si.y,     FULL_DATA.edges.d1.y,     FULL_DATA.edges.d2.y,     FULL_DATA.edges.di.y],
+            z: [FULL_DATA.edges.s1.z_off, FULL_DATA.edges.s2.z_off, FULL_DATA.edges.si.z_off, FULL_DATA.edges.d1.z_off, FULL_DATA.edges.d2.z_off, FULL_DATA.edges.di.z_off],
+            opacity: 1
+        }, [4, 5, 6, 7, 8, 9]);
+        Plotly.restyle('plot-3d', { opacity: 1, 'marker.color': ['#2D7DC4','#2D7DC4','#DC2626','#DC2626'] }, [10, 11, 12, 13]);
+        Plotly.restyle('plot-3d', { opacity: 0.1 }, [0, 1, 2, 3]);
+        applyNodeStyling();
+        ['i_name','i_sim','i_ds','i_dd','i_bs','i_bd','i_cls','i_cld'].forEach(id => document.getElementById(id).innerText = '—');
+        return;
+    }
+
+    const idx = FULL_DATA.nodes.names.indexOf(val);
+    if (idx < 0) return;
+
+    // Populate the info card with the selected node's data
+    document.getElementById('i_name').innerText = val;
+    const score = DATA.nodes.scores[idx];
+    const st = getStatus(score);
+    document.getElementById('i_sim').innerText   = `${score.toFixed(2)} (${st.label})`;
+    document.getElementById('i_sim').style.color = st.color;
+    document.getElementById('i_ds').innerText    = DATA.nodes.metrics_sani.deg[idx];
+    document.getElementById('i_dd').innerText    = DATA.nodes.metrics_depr.deg[idx];
+    document.getElementById('i_bs').innerText    = DATA.nodes.metrics_sani.bet[idx].toFixed(4);
+    document.getElementById('i_bd').innerText    = DATA.nodes.metrics_depr.bet[idx].toFixed(4);
+    document.getElementById('i_cls').innerText   = DATA.nodes.metrics_sani.clu[idx].toFixed(4);
+    document.getElementById('i_cld').innerText   = DATA.nodes.metrics_depr.clu[idx].toFixed(4);
+
+    // Dim meshes and all nodes to background
+    Plotly.restyle('plot-3d', { opacity: 0.05 }, [0, 1, 2, 3]);
+    Plotly.restyle('plot-3d', { opacity: 0.1  }, [10, 11, 12, 13]);
+
+    const tx_s = FULL_DATA.nodes.base_x[idx] - 130;
+    const tx_d = FULL_DATA.nodes.base_x[idx] + 130;
+    const ty   = FULL_DATA.nodes.base_y[idx];
+
+    // Filters edge arrays down to only those connecting through the target node
+    function filterEdges(edg, tx) {
+        let hx=[], hy=[], hz=[];
+        for(let i=0; i<edg.x_off.length; i+=3) {
+            if ((Math.abs(edg.x_off[i]   - tx) < 1 && Math.abs(edg.y[i]   - ty) < 1) ||
+                (Math.abs(edg.x_off[i+1] - tx) < 1 && Math.abs(edg.y[i+1] - ty) < 1)) {
+                hx.push(edg.x_off[i], edg.x_off[i+1], null);
+                hy.push(edg.y[i], edg.y[i+1], null);
+                hz.push(edg.z_off[i], edg.z_off[i+1], null);
+            }
+        }
+        return {x:hx, y:hy, z:hz};
+    }
+
+    if (currentView === 'global') {
+        // Hide all edges in overview mode — showing individual connections would clutter the scene
+        Plotly.restyle('plot-3d', {x:[[]], y:[[]], z:[[]]}, [4,5,6,7,8,9]);
+    } else if (currentView === 'sani') {
+        const hs1 = filterEdges(FULL_DATA.edges.s1, tx_s);
+        const hs2 = filterEdges(FULL_DATA.edges.s2, tx_s);
+        const hsi = filterEdges(FULL_DATA.edges.si, tx_s);
+        Plotly.restyle('plot-3d', { x:[hs1.x,hs2.x,hsi.x,[],[],[]], y:[hs1.y,hs2.y,hsi.y,[],[],[]], z:[hs1.z,hs2.z,hsi.z,[],[],[]], opacity:[1,1,1,1,1,1] }, [4,5,6,7,8,9]);
+    } else if (currentView === 'depr') {
+        const hd1 = filterEdges(FULL_DATA.edges.d1, tx_d);
+        const hd2 = filterEdges(FULL_DATA.edges.d2, tx_d);
+        const hdi = filterEdges(FULL_DATA.edges.di, tx_d);
+        Plotly.restyle('plot-3d', { x:[[],[],[],hd1.x,hd2.x,hdi.x], y:[[],[],[],hd1.y,hd2.y,hdi.y], z:[[],[],[],hd1.z,hd2.z,hdi.z], opacity:[1,1,1,1,1,1] }, [4,5,6,7,8,9]);
+    }
+
+    // Paint the selected node bright yellow; shrink all others to near-invisible
+    const nodeColors = Array(FULL_DATA.nodes.names.length).fill('rgba(0,0,0,0)');
+    nodeColors[idx] = '#f1c40f';
+    const nodeSizes = Array(FULL_DATA.nodes.names.length).fill(0.1);
+    nodeSizes[idx] = 12;
+    Plotly.restyle('plot-3d', {
+        'marker.color': [nodeColors, nodeColors, nodeColors, nodeColors],
+        'marker.size':  [nodeSizes,  nodeSizes,  nodeSizes,  nodeSizes],
+        opacity: 1
+    }, [10, 11, 12, 13]);
+}
+
+/* ── Auto-rotation ──────────────────────────────────────────────────────── */
+
+/** Toggles the continuous camera rotation animation. */
+function toggleRot() {
+    state.rot = !state.rot;
+    document.getElementById('b_rot').classList.toggle('active', state.rot);
+    if (state.rot) requestAnimationFrame(runRot);
+    else cancelAnimationFrame(state.af);
+}
+
+/**
+ * Advances the camera azimuth by state.spd radians per frame, producing a
+ * slow orbit around the scene centre. Continues recursively until toggleRot
+ * sets state.rot to false.
+ */
+function runRot() {
+    if (!state.rot) return;
+    const gd    = document.getElementById('plot-3d');
+    const cam   = gd.layout.scene.camera;
+    const r     = Math.sqrt(cam.eye.x**2 + cam.eye.y**2);
+    const theta = Math.atan2(cam.eye.y, cam.eye.x) + state.spd;
+    Plotly.relayout('plot-3d', {'scene.camera.eye': {x:r*Math.cos(theta), y:r*Math.sin(theta), z:cam.eye.z}})
+        .then(() => { if (state.rot) state.af = requestAnimationFrame(runRot); });
+}
+
+/** Resets the camera to the default position for the current view mode. */
+function resetView() { setView(currentView); }
+
+/* ── Dashboard helpers ──────────────────────────────────────────────────── */
+
+/**
+ * Renders a percentage-change delta badge below a KPI value pair.
+ * Positive deltas are coloured green; negative ones red. Integer inputs
+ * are shown without decimal places.
+ */
+function renderDelta(s, d, el_id) {
+    const el = document.getElementById(el_id);
+    if (s === 0) { el.innerText = ''; return; }
+    const diff  = ((d - s) / s) * 100;
+    const isInt = Number.isInteger(s) && Number.isInteger(d);
+    el.innerText  = (diff >= 0 ? '+' : '') + diff.toFixed(isInt ? 0 : 1) + '%';
+    el.className  = 'kpi-delta ' + (diff >= 0 ? 'delta-pos' : 'delta-neg');
+}
+
+/**
+ * Refreshes all KPI card values and delta badges for the currently selected
+ * group (sani / depr), then re-renders the radar chart.
+ */
+function updateDashboardStats() {
+    const grp = document.getElementById('stats-group-select').value;
+    const mL1 = grp === 'sani' ? DATA.metrics.sani_L1 : DATA.metrics.depr_L1;
+    const mL2 = grp === 'sani' ? DATA.metrics.sani_L2 : DATA.metrics.depr_L2;
+
+    ['arc','den','mod','eff','clu','tra'].forEach(k => {
+        document.getElementById(`k-${k}-s`).innerText = mL1[k];
+        document.getElementById(`k-${k}-d`).innerText = mL2[k];
+        renderDelta(mL1[k], mL2[k], `d-${k}`);
+    });
+
+    const sw_s = mL1.small_world, sw_d = mL2.small_world;
+    const swEl_s = document.getElementById('k-sw-s');
+    const swEl_d = document.getElementById('k-sw-d');
+    swEl_s.innerText    = sw_s !== null ? sw_s : T[LANG].nd;
+    swEl_d.innerText    = sw_d !== null ? sw_d : T[LANG].nd;
+    swEl_s.style.color  = sw_s !== null ? (sw_s > 1 ? 'var(--ok)' : 'var(--g2)') : 'var(--text-muted)';
+    swEl_d.style.color  = sw_d !== null ? (sw_d > 1 ? 'var(--ok)' : 'var(--g2)') : 'var(--text-muted)';
+    if (sw_s !== null && sw_d !== null) renderDelta(sw_s, sw_d, 'd-sw');
+
+    updateRadarChart(mL1, mL2);
+}
+
+/**
+ * Re-renders the radar chart with normalised values so that Layer 1 and
+ * Layer 2 are always visible regardless of their absolute magnitudes.
+ * Hover tooltips show the raw (un-normalised) values for accurate reading.
+ */
+function updateRadarChart(mL1, mL2) {
+    const rKeys    = ['den','mod','eff','clu','tra'];
+    const theta    = T[LANG].radar_labels;
+    const r_s_raw  = rKeys.map(k => mL1[k]);
+    const r_d_raw  = rKeys.map(k => mL2[k]);
+    const r_s_norm = r_s_raw.map((v, i) => v / Math.max(v, r_d_raw[i], 0.0001));
+    const r_d_norm = r_d_raw.map((v, i) => r_d_raw[i] / Math.max(v, r_d_raw[i], 0.0001));
+
+    Plotly.react('plot-radar', [
+        { type:'scatterpolar', r:[...r_s_norm, r_s_norm[0]], theta, fill:'toself', name:'Layer 1',
+          customdata:[...r_s_raw, r_s_raw[0]], hovertemplate:'%{theta}: %{customdata:.4f}<extra></extra>',
+          line:{color:'#1A4E7A', width:2.5}, marker:{size:6}, fillcolor:'rgba(26,78,122,0.12)' },
+        { type:'scatterpolar', r:[...r_d_norm, r_d_norm[0]], theta, fill:'toself', name:'Layer 2',
+          customdata:[...r_d_raw, r_d_raw[0]], hovertemplate:'%{theta}: %{customdata:.4f}<extra></extra>',
+          line:{color:'#9B1C1C', width:2.5}, marker:{size:6}, fillcolor:'rgba(155,28,28,0.10)' }
+    ], {
+        polar:{bgcolor:'rgba(0,0,0,0)',
+            radialaxis:{visible:true, showticklabels:false, color:'#44403C', gridcolor:'rgba(0,0,0,0.05)', gridwidth:1.5, range:[0,1.05]},
+            angularaxis:{color:'#44403C', gridcolor:'rgba(0,0,0,0.05)', gridwidth:1.5, tickfont:{size:11, color:'#44403C'}}},
+        showlegend:true, legend:{orientation:'h', x:0.5, xanchor:'center', y:-0.08, font:{size:11, color:'#44403C'}},
+        paper_bgcolor:'rgba(0,0,0,0)', font:{color:'#44403C', family:'DM Sans'}, margin:{t:15, b:65, l:50, r:50}
+    }, {responsive:true, displayModeBar:false});
+}
+
+/**
+ * Initialises the full dashboard: writes the global conservation score, draws
+ * the bar chart of the 15 most altered nodes, initialises the radar chart,
+ * and builds the vulnerable-hub ranking table.
+ */
+function buildDashboard() {
+    document.getElementById('k-gsim').innerText = DATA.metrics.global_sim + '%';
+
+    const tc    = '#44403C';
+    const gridC = 'rgba(0,0,0,0.05)';
+
+    // Sort all nodes by conservation score ascending; show the 15 most altered
+    const nodesComb = DATA.nodes.names.map((n, i) => ({ name: n, score: DATA.nodes.scores[i] })).sort((a, b) => a.score - b.score);
+    const worst = nodesComb.slice(0, 15).reverse();
+
+    Plotly.newPlot('plot-bar', [{
+        type:'bar', x:worst.map(d=>d.score), y:worst.map(d=>d.name), orientation:'h',
+        marker:{color:worst.map(d=>d.score), colorscale:'RdYlGn', cmin:0, cmax:1, line:{width:0}}
+    }], {
+        yaxis: {tickfont:{size:9, color:tc}, color:tc, automargin:true},
+        xaxis: {title:{text:T[LANG].bar_xaxis, font:{size:10, color:tc}}, color:tc, gridcolor:gridC, range:[0,1], zeroline:false},
+        paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
+        margin:{l:10, r:10, t:5, b:40}, font:{color:tc, family:'DM Sans', size:10}
+    }, {responsive:true, displayModeBar:false});
+
+    // Initialise the radar placeholder so updateDashboardStats can react() into it
+    Plotly.newPlot('plot-radar', [], {}, {responsive:true, displayModeBar:false});
+    updateDashboardStats();
+    buildHubDetector();
+}
+
+/**
+ * Builds the full vulnerable-hub ranking table, sorting all nodes by
+ * vuln_score = betweenness_G1 × (1 − conservation). The top 10 rows are
+ * highlighted with a faint background to call out the critical hubs.
+ */
+function buildHubDetector() {
+    const allNodes = DATA.nodes.names.map((n, i) => {
+        const bet_s      = DATA.nodes.metrics_sani.bet[i];
+        const score      = DATA.nodes.scores[i];
+        const vuln_score = bet_s * (1.0 - score);
+        return { name: n, bet_sani: bet_s, deg_sani: DATA.nodes.metrics_sani.deg[i], score, vuln_score };
+    }).sort((a, b) => b.vuln_score - a.vuln_score);
+
+    const maxVuln = allNodes[0].vuln_score || 1;
+
+    let html = `<table class="hub-table"><thead><tr>
+        <th>${T[LANG].hub_th_rank}</th>
+        <th>${T[LANG].hub_th_area}</th>
+        <th>${T[LANG].hub_th_bet}</th>
+        <th>${T[LANG].hub_th_deg}</th>
+        <th>${T[LANG].hub_th_cons}</th>
+        <th>${T[LANG].hub_th_status}</th>
+        <th>${T[LANG].hub_th_vuln}</th>
+    </tr></thead><tbody>`;
+
+    allNodes.forEach((h, i) => {
+        const st    = getStatus(h.score);
+        const sc    = h.score === 1.0 ? 'status-ok' : h.score >= 0.5 ? 'status-warn' : 'status-bad';
+        const barW  = Math.round((h.vuln_score / maxVuln) * 100);
+        const rowBg = i < 10 ? 'background:rgba(30,58,95,0.03);' : '';
+        const top_badge = i === 0 ? ` <span style="font-size:8px;background:var(--navy);color:white;padding:1px 5px;border-radius:3px;vertical-align:middle;margin-left:4px;">TOP</span>` : '';
+        html += `<tr style="${rowBg}">
+            <td style="color:var(--text-muted);font-weight:700;text-align:center;">${i+1}</td>
+            <td style="font-weight:${i<10?'700':'500'};">${h.name}${top_badge}</td>
+            <td>${h.bet_sani.toFixed(4)}</td>
+            <td>${h.deg_sani}</td>
+            <td>${h.score.toFixed(3)}</td>
+            <td><span class="status-pill ${sc}">${st.label}</span></td>
+            <td><div class="vuln-bar-wrap"><div class="vuln-bar-bg"><div class="vuln-bar-fill" style="width:${barW}%; background:${st.color};"></div></div><span class="vuln-score-val">${h.vuln_score.toFixed(5)}</span></div></td>
+        </tr>`;
+    });
+
+    document.getElementById('hub-table').innerHTML = html + '</tbody></table>';
+}
+
+/* ── App reset ──────────────────────────────────────────────────────────── */
+
+/**
+ * Clears all loaded data and resets every UI element to its initial state,
+ * returning the user to the home tab without reloading the page.
+ */
+function resetApp() {
+    DATA = null; FULL_DATA = null; RES_DATA = null;
+    state = { rot: false, af: null, spd: 0.004, consThreshold: 0, sizingMode: 'default' };
+    if (state.af) { cancelAnimationFrame(state.af); state.af = null; }
+    ['btn-vis','btn-dash','btn-reset'].forEach(id => document.getElementById(id).style.display = 'none');
+    ['f-atlas','f-sani','f-depr'].forEach(id => { document.getElementById(id).value = ''; });
+    ['l-atlas','l-sani','l-depr'].forEach(id => { document.getElementById(id).textContent = T[LANG].no_file; });
+    ['zone-atlas','zone-sani','zone-depr'].forEach(id => { document.getElementById(id).classList.remove('loaded'); });
+    document.getElementById('cons-slider').value = 0;
+    document.getElementById('slider-val').textContent = T[LANG].slider_all;
+    document.getElementById('error-banner').style.display = 'none';
+    const homeBtn = document.querySelector('.nav-tab[onclick*="tab-home"]');
+    switchTab('tab-home', homeBtn);
+}
+
+/* ── MuLaN modal ────────────────────────────────────────────────────────── */
+
+/** Opens the MuLaN configuration modal and resets it to its initial state. */
+function showAlignmentModal() {
+    if (!DATA) return;
+    document.getElementById('mulan-results').style.display  = 'none';
+    document.getElementById('btn-run-mulan').style.display  = 'block';
+    document.getElementById('alignment-modal').style.display = 'flex';
+}
+
+/**
+ * POSTs the selected algorithm to the /run_mulan endpoint and shows the
+ * result download buttons once the server responds successfully.
+ */
+async function runMulan() {
+    document.getElementById('btn-run-mulan').style.display = 'none';
+    const status = document.getElementById('mulan-status');
+    status.style.cssText = 'display:flex; margin-top:18px; align-items:center; gap:10px; justify-content:center;';
+    const algo = document.getElementById('algo-select').value;
+    try {
+        const res = await fetch('/run_mulan', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({algo}) });
+        if (!res.ok) throw new Error('Server alignment error');
+        RES_DATA = await res.json();
+        status.style.display = 'none';
+        document.getElementById('mulan-results').style.display = 'block';
+    } catch(e) {
+        alert('MuLaN Error: ' + e.message);
+        document.getElementById('btn-run-mulan').style.display = 'block';
+        status.style.display = 'none';
+    }
+}
+
+/* ── File download utility ──────────────────────────────────────────────── */
+
+/** Creates a temporary anchor element to trigger a browser file download. */
+function downloadFile(content, filename) {
+    const blob = new Blob([content], {type: 'text/plain'});
+    const link = document.createElement('a');
+    link.href     = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+}
+
+/* ── PDF report export ──────────────────────────────────────────────────── */
+
+/**
+ * Generates a full-page PDF report using html2pdf.js. The report includes
+ * the global conservation score, per-layer topological metrics for the
+ * selected group, and a complete vulnerability-ranked node table.
+ * PDF content remains in the current language at the time of export.
+ */
+function exportPDF() {
+    if (!DATA) return;
+    const today = new Date().toLocaleDateString('it-IT', {day:'2-digit', month:'2-digit', year:'numeric'});
+    const grp   = document.getElementById('stats-group-select').value;
+    const mL1   = grp === 'sani' ? DATA.metrics.sani_L1 : DATA.metrics.depr_L1;
+    const mL2   = grp === 'sani' ? DATA.metrics.sani_L2 : DATA.metrics.depr_L2;
+    const nomeGrp = grp === 'sani' ? T[LANG].group_g1 : T[LANG].group_g2;
+
+    const sw_s = mL1.small_world !== null ? mL1.small_world : T[LANG].nd;
+    const sw_d = mL2.small_world !== null ? mL2.small_world : T[LANG].nd;
+
+    // Build the full node vulnerability ranking for the PDF table
+    const allNodes = DATA.nodes.names.map((n, i) => {
+        const bet_s      = DATA.nodes.metrics_sani.bet[i];
+        const score      = DATA.nodes.scores[i];
+        const vuln_score = bet_s * (1.0 - score);
+        return { name: n, bet_sani: bet_s, deg_sani: DATA.nodes.metrics_sani.deg[i], score, vuln_score };
+    }).sort((a, b) => b.vuln_score - a.vuln_score);
+
+    const hubRows = allNodes.map((h, i) => {
+        const st = getStatus(h.score);
+        return `<tr style="background:${i%2===0?'#fafafa':'white'}">
+            <td style="text-align:center;font-weight:700;color:#888;">${i+1}</td>
+            <td><strong>${h.name}</strong></td>
+            <td style="text-align:center;font-family:monospace;">${h.bet_sani.toFixed(4)}</td>
+            <td style="text-align:center;">${h.deg_sani}</td>
+            <td style="text-align:center;font-family:monospace;">${h.score.toFixed(3)}</td>
+            <td style="text-align:center;color:${st.colorPdf};font-weight:700;">${st.label}</td>
+            <td style="text-align:center;font-family:monospace;">${h.vuln_score.toFixed(5)}</td>
+        </tr>`;
+    }).join('');
+
+    const html = `<div style="font-family:'DM Sans',sans-serif;color:#1C1917;padding:40px;background:#fff;max-width:1100px;margin:0 auto;font-size:13px;">
+        <h1 style="color:#1E3A5F;border-bottom:2px solid #1E3A5F;padding-bottom:10px;font-size:22px;margin-bottom:6px;">Brain Network | Report PDF</h1>
+        <div style="color:#A8A29E;font-size:11px;margin-bottom:28px;">${today}</div>
+        <h2 style="color:#1A4E7A;margin-top:32px;font-size:14px;border-left:3px solid #1A4E7A;padding-left:10px;text-transform:uppercase;letter-spacing:0.5px;">${T[LANG].kpi_sim}</h2>
+        <div style="text-align:center;padding:24px;background:#F0F4FA;border:1px solid #C5D5E8;border-radius:10px;margin:16px 0;"><div style="font-size:56px;font-weight:700;color:#1E3A5F;font-family:monospace;letter-spacing:-2px;">${DATA.metrics.global_sim}%</div></div>
+        <h2 style="color:#1A4E7A;margin-top:32px;font-size:14px;border-left:3px solid #1A4E7A;padding-left:10px;text-transform:uppercase;letter-spacing:0.5px;">${T[LANG].dash_heading}: ${nomeGrp}</h2>
+        <div style="display:flex;gap:18px;margin:10px 0;font-size:11px;align-items:center;"><span style="width:10px;height:10px;border-radius:50%;display:inline-block;background:#1A4E7A;"></span> Layer 1 &nbsp;&nbsp; <span style="width:10px;height:10px;border-radius:50%;display:inline-block;background:#9B1C1C;"></span> Layer 2</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0;">
+            <div style="background:#F7F5F2;border-radius:8px;padding:12px;text-align:center;border:1px solid #E0DDD8;"><div style="font-size:9px;color:#A8A29E;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;">${T[LANG].kpi_arc}</div><div style="display:flex;justify-content:center;gap:12px;"><span style="font-size:16px;font-weight:700;font-family:monospace;color:#1A4E7A;">${mL1.arc}</span><span style="font-size:16px;font-weight:700;font-family:monospace;color:#9B1C1C;">${mL2.arc}</span></div></div>
+            <div style="background:#F7F5F2;border-radius:8px;padding:12px;text-align:center;border:1px solid #E0DDD8;"><div style="font-size:9px;color:#A8A29E;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;">${T[LANG].kpi_den}</div><div style="display:flex;justify-content:center;gap:12px;"><span style="font-size:16px;font-weight:700;font-family:monospace;color:#1A4E7A;">${mL1.den}</span><span style="font-size:16px;font-weight:700;font-family:monospace;color:#9B1C1C;">${mL2.den}</span></div></div>
+            <div style="background:#F7F5F2;border-radius:8px;padding:12px;text-align:center;border:1px solid #E0DDD8;"><div style="font-size:9px;color:#A8A29E;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;">${T[LANG].kpi_mod}</div><div style="display:flex;justify-content:center;gap:12px;"><span style="font-size:16px;font-weight:700;font-family:monospace;color:#1A4E7A;">${mL1.mod}</span><span style="font-size:16px;font-weight:700;font-family:monospace;color:#9B1C1C;">${mL2.mod}</span></div></div>
+            <div style="background:#F7F5F2;border-radius:8px;padding:12px;text-align:center;border:1px solid #E0DDD8;"><div style="font-size:9px;color:#A8A29E;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;">${T[LANG].kpi_eff}</div><div style="display:flex;justify-content:center;gap:12px;"><span style="font-size:16px;font-weight:700;font-family:monospace;color:#1A4E7A;">${mL1.eff}</span><span style="font-size:16px;font-weight:700;font-family:monospace;color:#9B1C1C;">${mL2.eff}</span></div></div>
+            <div style="background:#F7F5F2;border-radius:8px;padding:12px;text-align:center;border:1px solid #E0DDD8;"><div style="font-size:9px;color:#A8A29E;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;">${T[LANG].kpi_clu}</div><div style="display:flex;justify-content:center;gap:12px;"><span style="font-size:16px;font-weight:700;font-family:monospace;color:#1A4E7A;">${mL1.clu}</span><span style="font-size:16px;font-weight:700;font-family:monospace;color:#9B1C1C;">${mL2.clu}</span></div></div>
+            <div style="background:#F7F5F2;border-radius:8px;padding:12px;text-align:center;border:1px solid #E0DDD8;"><div style="font-size:9px;color:#A8A29E;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;">${T[LANG].kpi_tra}</div><div style="display:flex;justify-content:center;gap:12px;"><span style="font-size:16px;font-weight:700;font-family:monospace;color:#1A4E7A;">${mL1.tra}</span><span style="font-size:16px;font-weight:700;font-family:monospace;color:#9B1C1C;">${mL2.tra}</span></div></div>
+        </div>
+        <h2 style="color:#1A4E7A;margin-top:32px;font-size:14px;border-left:3px solid #1A4E7A;padding-left:10px;text-transform:uppercase;letter-spacing:0.5px;">${T[LANG].hub_title} (${allNodes.length} nodes)</h2>
+        <table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:8px;">
+            <thead><tr>
+                <th style="background:#1E3A5F;color:white;padding:8px 10px;text-align:left;font-weight:600;">#</th>
+                <th style="background:#1E3A5F;color:white;padding:8px 10px;text-align:left;font-weight:600;">${T[LANG].hub_th_area}</th>
+                <th style="background:#1E3A5F;color:white;padding:8px 10px;text-align:left;font-weight:600;">${T[LANG].hub_th_bet}</th>
+                <th style="background:#1E3A5F;color:white;padding:8px 10px;text-align:left;font-weight:600;">${T[LANG].hub_th_deg}</th>
+                <th style="background:#1E3A5F;color:white;padding:8px 10px;text-align:left;font-weight:600;">${T[LANG].hub_th_cons}</th>
+                <th style="background:#1E3A5F;color:white;padding:8px 10px;text-align:left;font-weight:600;">${T[LANG].hub_th_status}</th>
+                <th style="background:#1E3A5F;color:white;padding:8px 10px;text-align:left;font-weight:600;">${T[LANG].hub_th_vuln}</th>
+            </tr></thead>
+            <tbody>${hubRows}</tbody>
+        </table>
+        <div style="font-size:10px;color:#A8A29E;margin-top:40px;text-align:center;border-top:1px solid #E0DDD8;padding-top:14px;">Brain Network | Gullì Salvatore | ${today}</div>
+    </div>`;
+
+    const element = document.createElement('div');
+    element.innerHTML = html;
+    html2pdf().set({
+        margin: 10,
+        filename: `Report_BrainNetwork_${nomeGrp.replace(/[^a-z0-9]/gi,'_')}.pdf`,
+        image: {type:'jpeg', quality:0.98},
+        html2canvas: {scale: 2},
+        jsPDF: {unit:'mm', format:'a4', orientation:'portrait'}
+    }).from(element).save();
+}
+</script>
+</body>
+</html>

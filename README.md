@@ -16,7 +16,7 @@ This repository contains a web-based application for the topological visualizati
 **Frontend:** HTML5, JavaScript, CSS, Plotly.js, html2pdf.js
 
 # Dataset
-If you look in the "Dataset" folder, there will be 3 files that can be used to run an example on the application, one of them is the ROI file with all the seed nodes, the other two are multilayer networks from two subjects, one is healthy and the other is depressed, each layer represents a condition, the first layer listens to muusic while the second layer doesn't.
+In the repository there will be 3 files that can be used to run an example on the application, one of them is the ROI file with all the seed nodes, the other two are multilayer networks from two subjects, one is healthy and the other is depressed, each layer represents a condition, the first layer listens to muusic while the second layer doesn't.
 
 # License
 This project is licensed under the MIT License.

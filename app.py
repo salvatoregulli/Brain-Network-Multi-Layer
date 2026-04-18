@@ -34,8 +34,9 @@ import re
 
 # ── Gemini AI configuration ───────────────────────────────────────────────────
 import os
-_gemini_key = os.environ.get("GEMINI_API_KEY", "AIzaSyBZk9Gz8vn0tIkhquP8FD65L6Hsboto7r4")
-genai.configure(api_key=_gemini_key)
+_gemini_key = os.environ.get("GEMINI_API_KEY", "")
+if _gemini_key:
+    genai.configure(api_key=_gemini_key)
 # Models to try in order — if the primary model's quota is exhausted, we
 # automatically fall back to alternatives.
 GEMINI_MODELS = ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.5-flash-lite"]
@@ -569,6 +570,12 @@ def chat():
 
         if not message:
             return jsonify({"error": "Empty message"}), 400
+
+        if not _gemini_key:
+            return jsonify({
+                "error": "⚙️ Chiave API Gemini non configurata. "
+                         "Imposta la variabile d'ambiente GEMINI_API_KEY per attivare Brain AI."
+            }), 503
 
         # Build the full system prompt, optionally enriched with live data
         full_system = SYSTEM_PROMPT + _build_data_context()

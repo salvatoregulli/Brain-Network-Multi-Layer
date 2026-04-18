@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Piattaforma di visualizzazione e analisi topologica avanzata per reti cerebrali multilayer, basata sull'algoritmo MuLaN.">
+    <title>Brain Network | Multi Layer</title>
+
+    <!-- External libraries -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;0,9..144,700;1,9..144,400&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <!-- Application stylesheet -->
+    <link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+
+<!-- ── Sidebar ────────────────────────────────────────────────────────────── -->
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-mark">
+            <div class="brand-icon-wrap">🧠</div>
+            <div class="brand-text-wrap">
+                <div class="brand-name">Brain Network</div>
+                <div class="brand-tagline" data-i18n="brand_tagline">ANALISI MULTILAYER</div>
+            </div>
+        </div>
+    </div>
+
+    <nav class="sidebar-nav">
+        <!-- Home tab is always visible; Vis and Stats appear after data is loaded -->
+        <button class="nav-tab active" onclick="switchTab('tab-home', this)"><i data-lucide="home" class="nav-icon"></i> <span data-i18n="nav_home">Home</span></button>
+        <button class="nav-tab" id="btn-vis" onclick="switchTab('tab-vis', this)" style="display:none;"><i data-lucide="hexagon" class="nav-icon"></i> <span data-i18n="nav_vis">Visualizzazione 3D</span></button>
+        <button class="nav-tab" id="btn-dash" onclick="switchTab('tab-dash', this)" style="display:none;"><i data-lucide="bar-chart-2" class="nav-icon"></i> <span data-i18n="nav_dash">Dashboard Stats</span></button>
+    </nav>
+
+    <div class="sidebar-bottom">
+        <button id="btn-reset" onclick="resetApp()"><i data-lucide="refresh-cw" class="btn-icon"></i> <span data-i18n="btn_reset">Nuova Analisi</span></button>
+        <!-- D1: Dark mode toggle -->
+        <button class="btn-dark-mode" id="btn-dark" onclick="toggleDarkMode(this)">
+            <i data-lucide="moon" class="btn-icon icon-dark-on"></i>
+            <i data-lucide="sun" class="btn-icon icon-dark-off"></i>
+            <span data-i18n="mode_dark">Dark</span>
+        </button>
+        <!-- Language selector: IT / EN -->
+        <div class="lang-toggle">
+            <button class="lang-btn active" data-lang="it" onclick="setLang('it')">IT</button>
+            <button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+        </div>
+    </div>
+</aside>
+
+<!-- ── Main content ──────────────────────────────────────────────────────── -->
+<main class="main">
+
+<!-- Loading overlay shown while the server processes the uploaded files -->
+<div id="loader">
+    <div class="loader-box">
+        <div class="loader-spinner"></div>
+        <div id="loader-main">Inizializzazione...</div>
+        <div id="loader-sub">Preparazione dell'ambiente di analisi</div>
+        <div class="loader-progress-bg"><div id="loader-progress"></div></div>
+    </div>
+</div>
+
+<!-- ── HOME TAB ──────────────────────────────────────────────────────────── -->
+<div id="tab-home" class="tab-content active">
+    <div class="home-layout">
+        <!-- Hero / feature description column -->
+        <div class="home-hero">
+            <div class="hero-eyebrow" data-i18n="eyebrow">Tesi di Laurea Triennale | Ingegneria Informatica e Biomedica | Gullì Salvatore</div>
+            <h1 class="hero-title" data-i18n-html="hero_title">Analisi comparativa di<br><em>reti cerebrali</em></h1>
+            <p class="hero-desc" data-i18n="hero_desc">Piattaforma di visualizzazione e analisi topologica avanzata per reti cerebrali multilayer, basata sull'algoritmo MuLaN.</p>
+
+            <!-- Collapsible user guide -->
+            <div class="guide-section">
+                <button class="guide-toggle" onclick="toggleGuide(this)">
+                    <span class="guide-toggle-icon">▶</span>
+                    <span data-i18n="guide_toggle">GUIDA ALL'USO</span>
+                </button>
+                <div class="guide-body">
+                    <div class="guide-steps-list">
+                        <div class="guide-step-item">
+                            <div class="guide-step-num">1</div>
+                            <div class="guide-step-content">
+                                <div class="guide-step-title" data-i18n="gs1t">Nodi Seme — Atlas CSV</div>
+                                <div class="guide-step-desc">File CSV delle regioni di interesse (ROI) con coordinate MNI nel nome. Deve contenere le colonne <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:var(--surface-2);padding:1px 4px;border-radius:3px;">roi_id</code> e <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:var(--surface-2);padding:1px 4px;border-radius:3px;">roi_name</code> nel formato <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:var(--surface-2);padding:1px 4px;border-radius:3px;">Nome (x,y,z)</code>.</div>
+                                <div class="guide-step-badge" data-i18n="gs1_badge">Separatore: ; (punto e virgola)</div>
+                            </div>
+                        </div>
+                        <div class="guide-step-item">
+                            <div class="guide-step-num">2</div>
+                            <div class="guide-step-content">
+                                <div class="guide-step-title" data-i18n="gs2t">Archi Gruppo 1 &amp; 2 — Edge CSV</div>
+                                <div class="guide-step-desc">Due file CSV separati per il gruppo sani e il gruppo depressi. Colonne obbligatorie: <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:var(--surface-2);padding:1px 4px;border-radius:3px;">source_id</code>, <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:var(--surface-2);padding:1px 4px;border-radius:3px;">target_id</code>, <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:var(--surface-2);padding:1px 4px;border-radius:3px;">weight</code>, <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:var(--surface-2);padding:1px 4px;border-radius:3px;">layer</code> (1=music, 2=silence, 3=inter).</div>
+                                <div class="guide-step-badge" data-i18n="gs2_badge">Separatore: , (virgola)</div>
+                            </div>
+                        </div>
+                        <div class="guide-step-item">
+                            <div class="guide-step-num">3</div>
+                            <div class="guide-step-content">
+                                <div class="guide-step-title" data-i18n="gs3t">Visualizzazione 3D Interattiva</div>
+                                <div class="guide-step-desc" data-i18n="gs3d">Dopo il caricamento vedrai le due reti cerebrali affiancate in 3D. Usa i controlli a destra per filtrare layer, archi e nodi. Puoi zoomare su un singolo gruppo con i pulsanti nella barra in basso.</div>
+                            </div>
+                        </div>
+                        <div class="guide-step-item">
+                            <div class="guide-step-num">4</div>
+                            <div class="guide-step-content">
+                                <div class="guide-step-title" data-i18n="gs4t">Algoritmo MuLaN</div>
+                                <div class="guide-step-desc" data-i18n="gs4d">Lancia l'allineamento locale multilayer dalla barra strumenti. Scegli l'algoritmo di community detection (Louvain, Greedy, Infomap) e scarica edgelist, comunità e report.</div>
+                            </div>
+                        </div>
+                        <div class="guide-step-item">
+                            <div class="guide-step-num">5</div>
+                            <div class="guide-step-content">
+                                <div class="guide-step-title" data-i18n="gs5t">Dashboard Analitica</div>
+                                <div class="guide-step-desc" data-i18n="gs5d">Nella sezione Stats trovi le metriche topologiche comparate tra i due layer, il radar chart, le aree più alterate e la tabella completa degli hub vulnerabili. Puoi esportare un report PDF completo.</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="guide-note" data-i18n-html="guide_note">⚠ Gli ID nei file archi devono corrispondere ai <strong>roi_id</strong> presenti nel file atlas. Nodi con coordinate mancanti o malformate vengono scartati automaticamente.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- File upload column -->
+        <div class="home-upload">
+            <div class="upload-heading" data-i18n="upload_heading">Caricamento dati</div>
+            <div class="upload-sub" data-i18n="upload_sub">Carica i tre file CSV per avviare l'analisi.</div>
+            <div class="upload-steps">
+                <label class="upload-step" id="zone-atlas">
+                    <input type="file" id="f-atlas" accept=".csv" onchange="fileLoaded(this, 'l-atlas', 'zone-atlas')">
+                    <div class="step-num"><span class="step-num-num">1</span><span class="step-num-loaded">✓</span></div>
+                    <div class="step-body">
+                        <div class="step-label" data-i18n="step1_label">Nodi Seme (ROI)</div>
+                        <div class="step-file" id="l-atlas" data-i18n="no_file">Nessun file selezionato</div>
+                    </div>
+                </label>
+                <label class="upload-step" id="zone-sani">
+                    <input type="file" id="f-sani" accept=".csv" onchange="fileLoaded(this, 'l-sani', 'zone-sani')">
+                    <div class="step-num"><span class="step-num-num">2</span><span class="step-num-loaded">✓</span></div>
+                    <div class="step-body">
+                        <div class="step-label" data-i18n="step2_label">Archi | Gruppo 1</div>
+                        <div class="step-file" id="l-sani" data-i18n="no_file">Nessun file selezionato</div>
+                    </div>
+                </label>
+                <label class="upload-step" id="zone-depr">
+                    <input type="file" id="f-depr" accept=".csv" onchange="fileLoaded(this, 'l-depr', 'zone-depr')">
+                    <div class="step-num"><span class="step-num-num">3</span><span class="step-num-loaded">✓</span></div>
+                    <div class="step-body">
+                        <div class="step-label" data-i18n="step3_label">Archi | Gruppo 2</div>
+                        <div class="step-file" id="l-depr" data-i18n="no_file">Nessun file selezionato</div>
+                    </div>
+                </label>
+            </div>
+            <button class="btn-run" onclick="uploadData()" data-i18n="btn_analyze">Avvia Analisi</button>
+            <div id="error-banner"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ── VISUALIZATION TAB ──────────────────────────────────────────────────── -->
+<div id="tab-vis" class="tab-content">
+    <!-- Plotly 3-D scatter plot canvas -->
+    <div id="plot-3d"></div>
+
+    <!-- Transition overlay: fades in/out to smooth out trace swaps between views -->
+    <div id="view-overlay"></div>
+
+    <!-- Right-side controls panel -->
+    <div class="vis-panel">
+        <div class="vis-panel-top"><div class="vis-panel-title" data-i18n="vis_panel_title">Interagisci col Modello</div></div>
+        <div class="vis-panel-body">
+
+            <!-- Group 1 (Healthy) layer visibility toggles -->
+            <div class="ctrl-section">
+                <div id="ctrl-sani" style="transition: opacity 0.4s ease;">
+                    <div class="layer-group-head"><span class="lgdot" style="background:var(--g1-mid);"></span><span class="lg-name" data-i18n="g1_name">GRUPPO 1 — Sani</span></div>
+                    <button class="toggle-btn active sani" onclick="toggleGroup('mesh_s', this)"><i data-lucide="brain" class="btn-icon"></i> <span data-i18n="btn_mesh">Mesh e Nodi Cerebrali</span></button>
+                    <button class="toggle-btn sani" onclick="toggleGroup('edge_s', this)"><i data-lucide="share-2" class="btn-icon"></i> <span data-i18n="btn_intra">Archi Intra-Layer</span></button>
+                    <button class="toggle-btn sani" onclick="toggleGroup('edge_si', this)"><i data-lucide="arrow-up-down" class="btn-icon"></i> <span data-i18n="btn_inter">Archi Inter-Layer</span></button>
+                    <div class="layer-badge-row">
+                        <div class="layer-badge" style="background:var(--g1-light); border:1px solid rgba(45,125,196,0.2); color:var(--g1);" data-i18n="badge_music_g1">L1 — Musica</div>
+                        <div class="layer-badge" style="background:var(--surface-2); border:1px solid var(--border); color:var(--text-muted);" data-i18n="badge_silence">L2 — Silenzio</div>
+                    </div>
+                </div>
+
+                <!-- Group 2 (Depressed) layer visibility toggles -->
+                <div id="ctrl-depr" style="transition: opacity 0.4s ease; margin-top: 15px;">
+                    <div class="layer-group-head"><span class="lgdot" style="background:var(--g2-mid);"></span><span class="lg-name" data-i18n="g2_name">GRUPPO 2 — Depressi</span></div>
+                    <button class="toggle-btn active depr" onclick="toggleGroup('mesh_d', this)"><i data-lucide="brain" class="btn-icon"></i> <span data-i18n="btn_mesh">Mesh e Nodi Cerebrali</span></button>
+                    <button class="toggle-btn depr" onclick="toggleGroup('edge_d', this)"><i data-lucide="share-2" class="btn-icon"></i> <span data-i18n="btn_intra">Archi Intra-Layer</span></button>
+                    <button class="toggle-btn depr" onclick="toggleGroup('edge_di', this)"><i data-lucide="arrow-up-down" class="btn-icon"></i> <span data-i18n="btn_inter">Archi Inter-Layer</span></button>
+                    <div class="layer-badge-row">
+                        <div class="layer-badge" style="background:var(--g2-light); border:1px solid rgba(220,38,38,0.2); color:var(--g2);" data-i18n="badge_music_g2">L1 — Musica</div>
+                        <div class="layer-badge" style="background:var(--surface-2); border:1px solid var(--border); color:var(--text-muted);" data-i18n="badge_silence">L2 — Silenzio</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ctrl-divider"></div>
+
+            <!-- Node sizing mode selector -->
+            <div class="ctrl-section">
+                <span class="ctrl-label" data-i18n="ctrl_sizing">Dimensionamento Nodi</span>
+                <select id="sel-sizing" onchange="changeNodeSize(this.value)">
+                    <option value="default" data-i18n="sizing_default">Dimensione Uniforme</option>
+                    <option value="deg"     data-i18n="sizing_deg">Grado</option>
+                    <option value="bet"     data-i18n="sizing_bet">Betweenness Centrality</option>
+                    <option value="clu"     data-i18n="sizing_clu">Clustering Coefficient</option>
+                </select>
+            </div>
+
+            <div class="ctrl-divider"></div>
+
+            <!-- Conservation-score threshold slider -->
+            <div class="ctrl-section">
+                <span class="ctrl-label" data-i18n="ctrl_filter">Filtro Conservazione</span>
+                <div class="slider-val-label" id="slider-val" data-i18n="slider_all">Tutti i nodi visibili</div>
+                <div class="slider-ends">
+                    <span data-i18n="filter_low">Perso</span>
+                    <span data-i18n="filter_mid">Compensato</span>
+                    <span data-i18n="filter_high">Intatto</span>
+                </div>
+                <input type="range" id="cons-slider" min="0" max="100" value="0" step="5" oninput="filterByConservation(this.value)">
+            </div>
+
+            <div class="ctrl-divider"></div>
+
+            <!-- Node search: highlights the selected node and dims everything else -->
+            <div class="ctrl-section">
+                <span class="ctrl-label" data-i18n="ctrl_search">Cerca Nodo</span>
+                <input type="text" id="s_in" list="dl_nodes" data-i18n-ph="search_ph" placeholder="🔍" oninput="if(this.value==='') searchNode('')" onchange="searchNode(this.value)">
+                <datalist id="dl_nodes"></datalist>
+
+                <!-- Info card: populated when a node is selected via search -->
+                <div class="info-card">
+                    <div class="info-node-name" id="i_name">—</div>
+                    <div class="info-row"><span class="info-key" data-i18n="info_conservation">Conservazione</span><span id="i_sim" style="font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700;">—</span></div>
+                    <div class="info-row">
+                        <span class="info-key" data-i18n="info_deg">Grado G1 / G2</span>
+                        <span class="info-vals"><span class="info-val-sani" id="i_ds">—</span><span style="color:var(--text-muted);">/</span><span class="info-val-depr" id="i_dd">—</span></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-key" data-i18n="info_bet">Betweenness G1 / G2</span>
+                        <span class="info-vals"><span class="info-val-sani" id="i_bs">—</span><span style="color:var(--text-muted);">/</span><span class="info-val-depr" id="i_bd">—</span></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-key" data-i18n="info_clu">Clustering G1 / G2</span>
+                        <span class="info-vals"><span class="info-val-sani" id="i_cls">—</span><span style="color:var(--text-muted);">/</span><span class="info-val-depr" id="i_cld">—</span></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom floating toolbar for view switching and camera controls -->
+    <div class="vis-toolbar">
+        <div class="toolbar-inner">
+            <button class="tool-btn active" id="btn-view-global" onclick="setView('global')"><i data-lucide="globe" class="tool-icon"></i> <span data-i18n="toolbar_global">Overview</span></button>
+            <button class="tool-btn" id="btn-view-sani" onclick="setView('sani')"><i data-lucide="scan" class="tool-icon"></i> <span data-i18n="toolbar_g1">Gruppo 1</span></button>
+            <button class="tool-btn" id="btn-view-depr" onclick="setView('depr')"><i data-lucide="scan" class="tool-icon"></i> <span data-i18n="toolbar_g2">Gruppo 2</span></button>
+            <div class="divider"></div>
+            <button class="tool-btn btn-align-hero" onclick="showAlignmentModal()"><i data-lucide="zap" class="tool-icon"></i> Run MuLaN</button>
+            <div class="divider"></div>
+            <button class="tool-btn" id="b_rot" onclick="toggleRot()"><i data-lucide="rotate-cw" class="tool-icon"></i> <span data-i18n="toolbar_rot">Rotazione</span></button>
+            <button class="tool-btn" onclick="resetView()"><i data-lucide="maximize" class="tool-icon"></i> <span data-i18n="toolbar_reset">Reset Camera</span></button>
+        </div>
+    </div>
+</div>
+
+<!-- ── MULAN ALIGNMENT MODAL ──────────────────────────────────────────────── -->
+<div id="alignment-modal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
+    <div class="modal-box">
+        <h2 style="font-family: 'Fraunces', serif; color: var(--navy); margin-top: 0; margin-bottom: 8px; font-size: 20px; letter-spacing: -0.3px;" data-i18n="modal_title">Configurazione MuLaN</h2>
+        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 20px; line-height: 1.65;" data-i18n="modal_desc">Allineamento locale per reti multilayer. Scegli l'algoritmo di community detection e avvia l'elaborazione.</p>
+        <label style="font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); display: block; margin-bottom: 7px;" data-i18n="modal_algo_label">Algoritmo Community Detection</label>
+        <select id="algo-select" style="width: 100%; padding: 11px 14px; margin-bottom: 20px; border-radius: 8px; border: 1px solid var(--border); font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text); background: var(--surface-2); outline: none; cursor: pointer;">
+            <option value="louvain"  data-i18n="algo_louvain">Louvain — veloce, ottimizzazione modularity</option>
+            <option value="greedy"   data-i18n="algo_greedy">Greedy Modularity — deterministico</option>
+            <option value="infomap"  data-i18n="algo_infomap">Infomap — basato sul flusso di informazione</option>
+        </select>
+
+        <!-- A6: Configurable MuLaN hyperparameters -->
+        <div class="mulan-params-section">
+            <div class="mulan-params-title" data-i18n="mulan_params_title">Parametri Avanzati</div>
+            <div class="mulan-params-grid">
+                <div class="mulan-param-item">
+                    <label for="param-delta" data-i18n="mulan_param_delta">δ DELTA (hop max)</label>
+                    <input type="number" id="param-delta" value="3" min="1" max="10" step="1">
+                </div>
+                <div class="mulan-param-item">
+                    <label for="param-match" data-i18n="mulan_param_match">MATCH</label>
+                    <input type="number" id="param-match" value="1.0" min="0" max="1" step="0.05">
+                </div>
+                <div class="mulan-param-item">
+                    <label for="param-mismatch" data-i18n="mulan_param_mismatch">MISMATCH</label>
+                    <input type="number" id="param-mismatch" value="0.5" min="0" max="1" step="0.05">
+                </div>
+                <div class="mulan-param-item">
+                    <label for="param-gap" data-i18n="mulan_param_gap">GAP</label>
+                    <input type="number" id="param-gap" value="0.2" min="0" max="1" step="0.05">
+                </div>
+            </div>
+            <div class="mulan-weighted-note" data-i18n="mulan_weighted_note">⚖ Il MATCH è ora pesato per la similarità dei pesi degli archi.</div>
+        </div>
+
+        <button class="btn-run" id="btn-run-mulan" onclick="runMulan()" style="margin-top:20px;" data-i18n="modal_btn_run">Avvia Algoritmo MuLaN</button>
+
+        <!-- Spinner shown while the server is processing the alignment -->
+        <div id="mulan-status" style="display:none; margin-top:18px; align-items:center; gap:10px; justify-content:center;">
+            <div style="width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--navy);border-radius:50%;animation:spin 0.7s linear infinite;flex-shrink:0;"></div>
+            <span style="font-size: 12px; color: var(--navy); font-weight: 600;" data-i18n="modal_processing">Elaborazione in corso...</span>
+        </div>
+
+        <!-- Result actions shown after a successful alignment run -->
+        <div id="mulan-results" style="display: none; margin-top: 20px;">
+            <p style="font-weight: bold; color: var(--ok); font-size:15px; margin-bottom:12px;" data-i18n="modal_done">✓ Allineamento Completato</p>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+                <button style="display:flex; align-items:center; gap:8px; background:var(--surface-2); color:var(--text); border:1px solid var(--border); padding:10px 14px; width:100%; border-radius:8px; cursor:pointer; font-weight:700; font-family:'DM Sans',sans-serif; font-size:12px; text-align:left;" onclick="downloadFile(RES_DATA.communities, 'Mulan_Communities.txt')"><i data-lucide="download" class="btn-icon"></i> <span data-i18n="modal_dl_comm">Scarica Comunità Rilevate</span></button>
+                <button style="display:flex; align-items:center; gap:8px; background:var(--g1-light); color:var(--navy); border:1px solid var(--g1-mid); padding:10px 14px; width:100%; border-radius:8px; cursor:pointer; font-weight:700; font-family:'DM Sans',sans-serif; font-size:12px; text-align:left;" onclick="openAlignedSupergraphModal()"><i data-lucide="brain" class="btn-icon"></i> <span data-i18n="modal_open_supergraph">Visualizzazione Interattiva Supergrafo</span></button>
+            </div>
+            <button style="background:none; color:var(--text-muted); border:1px solid var(--border); padding:9px; width:100%; border-radius:8px; margin-top:16px; cursor:pointer; font-family:'DM Sans',sans-serif; font-size:12px;" onclick="document.getElementById('alignment-modal').style.display='none'" data-i18n="modal_close">Chiudi</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── ALIGNED SUPERGRAPH MODAL ───────────────────────────────────────────── -->
+<div id="aligned-supergraph-modal" class="modal-overlay" onclick="if(event.target===this) closeAlignedSupergraphModal()">
+    <div class="modal-box modal-wide">
+        <div class="modal-wide-head">
+            <div class="modal-wide-title" data-i18n="aligned_title">Supergrafo allineato interattivo</div>
+            <button class="modal-close" onclick="closeAlignedSupergraphModal()"><i data-lucide="x" class="btn-icon"></i> <span data-i18n="modal_close">Chiudi</span></button>
+        </div>
+        <div class="aligned-layout">
+            <div id="aligned-supergraph-plot"></div>
+            <div class="aligned-side">
+                <div class="aligned-side-inner">
+                    <div class="meta-grid" id="aligned-metrics"></div>
+                    <div class="ctrl-label" style="margin-bottom:8px;" data-i18n="aligned_legend">Legenda comunità</div>
+                    <div style="display:flex; gap:8px; margin-bottom:10px;">
+                        <button class="dash-tab-btn" onclick="filterAlignedCommunity(null)" data-i18n="aligned_show_all">Mostra tutte</button>
+                    </div>
+                    <div id="aligned-community-list" class="community-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── LAYER COMPARISON MODAL ─────────────────────────────────────────────── -->
+<div id="layer-compare-modal" class="modal-overlay" onclick="if(event.target===this) closeLayerComparisonModal()">
+    <div class="modal-box modal-wide">
+        <div class="modal-wide-head">
+            <div class="modal-wide-title" id="layer-comp-title" data-i18n="layer_compare_title">Comparazione comunità tra layer</div>
+            <button class="modal-close" onclick="closeLayerComparisonModal()"><i data-lucide="x" class="btn-icon"></i> <span data-i18n="modal_close">Chiudi</span></button>
+        </div>
+        <div id="layer-comp-content" class="layer-comp-layout"></div>
+    </div>
+</div>
+
+<!-- ── NODE DETAIL MODAL (F3) ──────────────────────────────────────────── -->
+<div id="node-detail-modal" class="modal-overlay" onclick="if(event.target===this) closeNodeDetailModal()">
+    <div class="modal-box modal-wide" style="max-width:720px;">
+        <div class="modal-wide-head">
+            <div class="modal-wide-title" id="ndm-header-title" data-i18n="node_modal_title">Dettaglio Nodo</div>
+            <button class="modal-close" onclick="closeNodeDetailModal()"><i data-lucide="x" class="btn-icon"></i> <span data-i18n="modal_close">Chiudi</span></button>
+        </div>
+        <div style="padding:22px 26px;">
+            <!-- Node name + conservation -->
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+                <div style="font-family:'Fraunces',serif;font-size:20px;font-weight:700;color:var(--text);letter-spacing:-0.3px;" id="ndm-title">—</div>
+                <div id="ndm-score" style="font-family:'JetBrains Mono',monospace;font-size:14px;">—</div>
+            </div>
+            <!-- Anatomy -->
+            <div style="margin-bottom:18px;">
+                <div class="ctrl-label" data-i18n="node_modal_anatomy">Anatomia</div>
+                <div id="ndm-anatomy" class="ndm-anat-grid"></div>
+            </div>
+            <!-- Metrics comparison table -->
+            <div style="margin-bottom:18px;">
+                <div class="ctrl-label" data-i18n="node_modal_metrics">Confronto Metriche G1 vs G2</div>
+                <table class="ndm-metrics-table">
+                    <thead><tr>
+                        <th data-i18n="node_modal_metric">Metrica</th>
+                        <th style="text-align:center;">G1</th>
+                        <th style="text-align:center;">G2</th>
+                        <th style="text-align:center;" data-i18n="node_modal_delta">Δ</th>
+                    </tr></thead>
+                    <tbody id="ndm-metrics-body"></tbody>
+                </table>
+            </div>
+            <!-- Neighbours -->
+            <div class="ctrl-label" data-i18n="node_modal_neighbors">Vicini Principali</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                <div>
+                    <div style="font-size:10px;font-weight:700;color:var(--g1);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;">G1</div>
+                    <div id="ndm-neighbors-g1" class="ndm-neighbor-list"></div>
+                </div>
+                <div>
+                    <div style="font-size:10px;font-weight:700;color:var(--g2);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;">G2</div>
+                    <div id="ndm-neighbors-g2" class="ndm-neighbor-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── DASHBOARD TAB ──────────────────────────────────────────────────────── -->
+<div id="tab-dash" class="tab-content">
+    <div class="dash-container">
+        <div class="dash-topbar">
+            <div class="dash-heading" style="display:flex; align-items:center; gap: 15px;">
+                <span data-i18n="dash_heading">Analisi Comparata Layer</span>
+                <select id="stats-group-select" onchange="updateDashboardStats()" style="width:auto; padding: 6px 12px; font-size: 14px; font-weight: bold; color: var(--navy); background: var(--surface); border-color: var(--navy); border-radius: 8px;">
+                    <option value="sani" data-i18n="group_g1">Gruppo 1 (Sani)</option>
+                    <option value="depr" data-i18n="group_g2">Gruppo 2 (Depressi)</option>
+                </select>
+                <div class="dash-tabs">
+                    <button class="dash-tab-btn" id="btn-layer-compare" onclick="openLayerComparisonModal()" data-i18n="dash_compare_tab">Comparazione Comunità</button>
+                </div>
+            </div>
+            <div class="group-legend">
+                <div class="gl-item"><div class="gl-dot" style="background:var(--g1-mid);"></div>Layer 1</div>
+                <div class="gl-item"><div class="gl-dot" style="background:var(--g2-mid);"></div>Layer 2</div>
+                <button class="btn-run" onclick="exportPDF()" style="width: auto; padding: 8px 16px; margin-left: 10px;" data-i18n="btn_pdf">DOWNLOAD REPORT PDF</button>
+            </div>
+        </div>
+
+        <!-- KPI metric cards -->
+        <div class="kpi-grid">
+            <div class="kpi-card"><div class="kpi-title" data-i18n="kpi_arc">Connessioni <span class="kpi-q" onclick="toggleKpiTip('arc')" title="">?</span></div><div class="kpi-tip" id="tip-arc" data-i18n="tip_arc">Numero totale di archi (connessioni funzionali) presenti nel layer selezionato. Indica la quantità complessiva di link tra le regioni cerebrali.</div><div class="kpi-val-row"><div class="kpi-val" style="color:var(--g1);" id="k-arc-s">—</div><div class="kpi-val" style="color:var(--g2);" id="k-arc-d">—</div></div><div id="d-arc"></div></div>
+            <div class="kpi-card"><div class="kpi-title" data-i18n="kpi_den">Densità <span class="kpi-q" onclick="toggleKpiTip('den')" title="">?</span></div><div class="kpi-tip" id="tip-den" data-i18n="tip_den">Rapporto tra il numero di archi presenti e il numero massimo di archi possibili nel grafo. Valori vicini a 1 indicano una rete molto densa (molte connessioni); valori vicini a 0 una rete sparsa. Range: 0–1.</div><div class="kpi-val-row"><div class="kpi-val" style="color:var(--g1);" id="k-den-s">—</div><div class="kpi-val" style="color:var(--g2);" id="k-den-d">—</div></div><div id="d-den"></div></div>
+            <div class="kpi-card"><div class="kpi-title" data-i18n="kpi_mod">Modularità <span class="kpi-q" onclick="toggleKpiTip('mod')" title="">?</span></div><div class="kpi-tip" id="tip-mod" data-i18n="tip_mod">Misura la forza della suddivisione della rete in comunità (calcolata con algoritmo di Louvain). Valori alti indicano una rete ben partizionata in moduli funzionali distinti; valori bassi suggeriscono una struttura più omogenea. Range: −0.5–1.</div><div class="kpi-val-row"><div class="kpi-val" style="color:var(--g1);" id="k-mod-s">—</div><div class="kpi-val" style="color:var(--g2);" id="k-mod-d">—</div></div><div id="d-mod"></div></div>
+            <div class="kpi-card"><div class="kpi-title" data-i18n="kpi_eff">Efficienza Globale <span class="kpi-q" onclick="toggleKpiTip('eff')" title="">?</span></div><div class="kpi-tip" id="tip-eff" data-i18n="tip_eff">Media dell'inverso delle distanze geodetiche tra tutte le coppie di nodi. Valori alti indicano un'elevata capacità della rete di trasferire informazioni tra regioni distanti. Range: 0–1.</div><div class="kpi-val-row"><div class="kpi-val" style="color:var(--g1);" id="k-eff-s">—</div><div class="kpi-val" style="color:var(--g2);" id="k-eff-d">—</div></div><div id="d-eff"></div></div>
+            <div class="kpi-card"><div class="kpi-title" data-i18n="kpi_clu">Clustering Medio <span class="kpi-q" onclick="toggleKpiTip('clu')" title="">?</span></div><div class="kpi-tip" id="tip-clu" data-i18n="tip_clu">Media dei coefficienti di clustering locali di tutti i nodi. Misura la tendenza dei vicini di ciascun nodo a formare triangoli (cluster). Valori alti indicano una forte segregazione funzionale locale. Range: 0–1.</div><div class="kpi-val-row"><div class="kpi-val" style="color:var(--g1);" id="k-clu-s">—</div><div class="kpi-val" style="color:var(--g2);" id="k-clu-d">—</div></div><div id="d-clu"></div></div>
+            <div class="kpi-card"><div class="kpi-title" data-i18n="kpi_tra">Transitività <span class="kpi-q" onclick="toggleKpiTip('tra')" title="">?</span></div><div class="kpi-tip" id="tip-tra" data-i18n="tip_tra">Frazione di triangoli chiusi rispetto al numero totale di triple connesse nella rete. A differenza del clustering medio, è una misura globale della tendenza al clustering. Range: 0–1.</div><div class="kpi-val-row"><div class="kpi-val" style="color:var(--g1);" id="k-tra-s">—</div><div class="kpi-val" style="color:var(--g2);" id="k-tra-d">—</div></div><div id="d-tra"></div></div>
+            <div class="kpi-card"><div class="kpi-title" data-i18n="kpi_sw">Small-World Index <span class="kpi-q" onclick="toggleKpiTip('sw')" title="">?</span></div><div class="kpi-tip" id="tip-sw" data-i18n="tip_sw">Indice Small-World σ = (C/C_rand) / (L/L_rand), dove C è il clustering e L la lunghezza media dei percorsi. Se σ > 1 la rete possiede proprietà small-world: alta segregazione locale e integrazione globale efficiente.</div><div class="kpi-val-row"><div class="kpi-val" id="k-sw-s">—</div><div class="kpi-val" id="k-sw-d">—</div></div><div id="d-sw"></div></div>
+            <div class="kpi-card kpi-card-accent"><div class="kpi-title" data-i18n="kpi_sim">Conservazione Strutturale <span class="kpi-q" onclick="toggleKpiTip('sim')" title="">?</span></div><div class="kpi-tip" id="tip-sim" data-i18n="tip_sim">Media dei punteggi di conservazione MuLaN calcolati su tutti i nodi. Indica quanto la struttura topologica complessiva della rete si è preservata tra i due gruppi. Range: 0–100%.</div><div class="kpi-val-xl" id="k-gsim">—%</div></div>
+        </div>
+
+        <!-- Bar chart + radar chart row -->
+        <div class="chart-grid">
+            <div class="chart-card"><div class="chart-title-text" id="chart-bar-title" data-i18n="chart_bar">Aree Cerebrali Più Alterate</div><div id="plot-bar" style="height:340px; width:100%;"></div></div>
+            <div class="chart-card"><div class="chart-title-text" id="chart-radar-title" data-i18n="chart_radar">Impronta Topologica Comparata (Layer 1 vs 2)</div><div id="plot-radar" style="height:340px; width:100%;"></div></div>
+        </div>
+
+        <!-- F2 + F7: Additional analytics charts -->
+        <div class="chart-grid">
+            <div class="chart-card"><div class="chart-title-text" data-i18n="chart_degree">Distribuzione dei Gradi</div><div id="plot-degree" style="height:340px; width:100%;"></div></div>
+            <div class="chart-card"><div class="chart-title-text" data-i18n="chart_box">Distribuzione Metriche Nodali</div><div id="plot-box" style="height:340px; width:100%;"></div></div>
+        </div>
+        <div class="chart-grid">
+            <div class="chart-card" style="grid-column:1/-1;"><div class="chart-title-text" data-i18n="chart_scatter">Betweenness vs Clustering</div><div id="plot-scatter" style="height:380px; width:100%;"></div></div>
+        </div>
+
+        <!-- Full vulnerable-hub ranking table -->
+        <div class="hub-section">
+            <div class="hub-section-head">
+                <div>
+                    <div class="hub-section-title" data-i18n="hub_title">Analisi Hub Vulnerabili — Tutti i Nodi</div>
+                    <div class="hub-section-desc" data-i18n="hub_desc">Tutti i nodi ordinati per score di vulnerabilità (Betweenness G1 × (1 − Conservazione)). Le prime 10 righe corrispondono agli hub critici.</div>
+                </div>
+            </div>
+            <div id="hub-table"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ── AI CHATBOT ──────────────────────────────────────────────────────── -->
+<!-- Floating Action Button — always visible -->
+<button class="chat-fab" id="chat-fab" onclick="toggleChat()" title="Brain AI Assistant">
+    <span class="chat-fab-icon">💬</span>
+    <span class="chat-fab-close">✕</span>
+    <span class="chat-fab-pulse"></span>
+</button>
+
+<!-- Chat Panel -->
+<div class="chat-panel" id="chat-panel">
+    <div class="chat-header">
+        <div class="chat-header-left">
+            <div class="chat-header-avatar">🧠</div>
+            <div class="chat-header-info">
+                <div class="chat-header-name" data-i18n="chat_ai_name">Brain AI</div>
+                <div class="chat-header-status" data-i18n="chat_status">Assistente Neuroscienze</div>
+            </div>
+        </div>
+        <div class="chat-header-actions">
+            <button class="chat-header-btn" onclick="clearChat()" title="Clear chat">
+                <i data-lucide="trash-2" class="btn-icon"></i>
+            </button>
+            <button class="chat-header-btn" onclick="closeChat()" title="Close">
+                <i data-lucide="x" class="btn-icon"></i>
+            </button>
+        </div>
+    </div>
+    <div class="chat-messages" id="chat-messages"></div>
+    <div class="chat-input-area">
+        <input type="text" id="chat-input" class="chat-input-field" data-i18n-ph="chat_placeholder" placeholder="Scrivi un messaggio..." onkeydown="chatKeyDown(event)" autocomplete="off">
+        <button class="chat-send-btn" onclick="sendChatMessage()" id="chat-send-btn">
+            <i data-lucide="send" class="btn-icon"></i>
+        </button>
+    </div>
+</div>
+
+</main>
+
+<!-- ── JavaScript modules (order matters: state → i18n → loader → ... → export) ── -->
+<script src="/static/js/state.js"></script>
+<script src="/static/js/i18n.js"></script>
+<script src="/static/js/loader.js"></script>
+<script src="/static/js/upload.js"></script>
+<script src="/static/js/render3d.js"></script>
+<script src="/static/js/camera.js"></script>
+<script src="/static/js/controls.js"></script>
+<script src="/static/js/dashboard.js"></script>
+<script src="/static/js/mulan_modal.js"></script>
+<script src="/static/js/layer_modal.js"></script>
+<script src="/static/js/node_modal.js"></script>
+<script src="/static/js/export.js"></script>
+<script src="/static/js/chatbot.js"></script>
+
+<!-- Initialise Lucide SVG icons and restore dark mode preference -->
+<script>
+    lucide.createIcons();
+    // Restore dark mode from localStorage
+    if (localStorage.getItem('darkMode') === '1') {
+        state.darkMode = true;
+        document.body.classList.add('dark');
+        const btn = document.getElementById('btn-dark');
+        btn.classList.add('active');
+        btn.querySelector('span').textContent = T[LANG].mode_light;
+        btn.querySelector('span').setAttribute('data-i18n', 'mode_light');
+    }
+</script>
+
+</body>
+</html>

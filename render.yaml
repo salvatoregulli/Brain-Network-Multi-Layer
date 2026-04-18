@@ -5,7 +5,7 @@ services:
     name: brain-network-multilayer
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120 --workers 1
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --timeout 300 --workers 1 --worker-class gthread --threads 2
     envVars:
       - key: GEMINI_API_KEY
         sync: false  # You'll set this manually in Render dashboard
